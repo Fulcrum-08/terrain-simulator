@@ -105,13 +105,30 @@
   document.querySelector("#unity-loading-bar").style.display = "block";
 
   var unityInstanceRef = null;
+  var simRunning = false;
   var playButton = document.querySelector("#unity-play-button");
+
+  function dockButtonToCorner() {
+    playButton.style.top = "auto";
+    playButton.style.left = "auto";
+    playButton.style.bottom = "12px";
+    playButton.style.right = "12px";
+    playButton.style.transform = "none";
+    playButton.style.padding = "8px 20px";
+    playButton.style.fontSize = "14px";
+  }
 
   playButton.onclick = () => {
     if (!unityInstanceRef) return;
-    // GameObject name and method name must match the Unity side exactly
-    unityInstanceRef.SendMessage("SimulationController", "StartSimulation");
-    playButton.remove();
+    if (simRunning) {
+      unityInstanceRef.SendMessage("SimulationController", "StopSimulation");
+      playButton.innerHTML = "&#9654;&nbsp;Play";
+    } else {
+      unityInstanceRef.SendMessage("SimulationController", "StartSimulation");
+      playButton.innerHTML = "&#10074;&#10074;&nbsp;Pause";
+      dockButtonToCorner(); // move out of the way after first start
+    }
+    simRunning = !simRunning;
   };
 
   var script = document.createElement("script");
