@@ -17,10 +17,14 @@
     </div>
   </div>
   <button id="unity-play-button">&#9654;&nbsp;Play</button>
-  <label id="load-terrain-btn">
-    Load New Terrain
-    <input type="file" id="terrain-file" accept=".raw" style="display:none;">
-  </label>
+  <div id="sim-controls">
+    <button id="btn-pause" class="sim-btn">Pause</button>
+    <button id="btn-resume" class="sim-btn">Resume</button>
+    <label class="sim-btn">
+      Load New Terrain
+      <input type="file" id="terrain-file" accept=".raw" style="display:none;">
+    </label>
+  </div>
   <div id="unity-warning"> </div>
   <div id="unity-footer">
     <div id="unity-logo-title-footer"></div>
@@ -49,12 +53,17 @@
     background: rgba(0, 0, 0, 0.85);
   }
 
-  #load-terrain-btn {
+  #sim-controls {
     display: none;
     position: absolute;
     top: 10px;
     left: 10px;
+    z-index: 10;
+  }
+  .sim-btn {
+    display: inline-block;
     padding: 8px 16px;
+    margin-right: 6px;
     font-size: 14px;
     font-family: inherit;
     color: #fff;
@@ -62,9 +71,8 @@
     border: 1px solid #fff;
     border-radius: 4px;
     cursor: pointer;
-    z-index: 10;
   }
-  #load-terrain-btn:hover {
+  .sim-btn:hover {
     background: rgba(0, 0, 0, 0.85);
   }
 </style>
@@ -120,14 +128,25 @@
 
   var unityInstanceRef = null;
   var playButton = document.querySelector("#unity-play-button");
-  var loadTerrainButton = document.querySelector("#load-terrain-btn");
+  var simControls = document.querySelector("#sim-controls");
 
-  // ---- Play button ----
+  // ---- Play button: first start ----
   playButton.onclick = () => {
     if (!unityInstanceRef) return;
     unityInstanceRef.SendMessage("SimulationController", "StartSimulation");
     playButton.remove();
-    loadTerrainButton.style.display = "block";
+    simControls.style.display = "block";
+  };
+
+  // ---- Pause / Resume ----
+  document.querySelector("#btn-pause").onclick = () => {
+    if (!unityInstanceRef) return;
+    unityInstanceRef.SendMessage("SimulationController", "StopSimulation");
+  };
+
+  document.querySelector("#btn-resume").onclick = () => {
+    if (!unityInstanceRef) return;
+    unityInstanceRef.SendMessage("SimulationController", "StartSimulation");
   };
 
   // ---- Load New Terrain (.raw) ----
