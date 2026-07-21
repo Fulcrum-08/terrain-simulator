@@ -17,6 +17,10 @@
     </div>
   </div>
   <button id="unity-play-button">&#9654;&nbsp;Play</button>
+  <label id="load-terrain-btn">
+    Load New Terrain
+    <input type="file" id="terrain-file" accept=".raw" style="display:none;">
+  </label>
   <div id="unity-warning"> </div>
   <div id="unity-footer">
     <div id="unity-logo-title-footer"></div>
@@ -44,17 +48,29 @@
   #unity-play-button:hover {
     background: rgba(0, 0, 0, 0.85);
   }
-  #unity-play-button:focus-visible {
-    outline: 3px solid #7ab8ff;
-    outline-offset: 2px;
+
+  #load-terrain-btn {
+    display: none;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 10;
+  }
+  #load-terrain-btn:hover {
+    background: rgba(0, 0, 0, 0.85);
   }
 </style>
 <script>
   var canvas = document.querySelector("#unity-canvas");
 
-  // Shows a temporary message banner/ribbon for a few seconds, or
-  // a permanent error message on top of the canvas if type=='error'.
-  // If type=='warning', a yellow highlight color is used.
   function unityShowBanner(msg, type) {
     var warningBanner = document.querySelector("#unity-warning");
     function updateBannerVisibility() {
@@ -89,7 +105,6 @@
   };
 
   if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-    // Mobile device style: fill the whole browser client area with the game canvas:
     var meta = document.createElement('meta');
     meta.name = 'viewport';
     meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
@@ -97,7 +112,6 @@
     document.querySelector("#unity-container").className = "unity-mobile";
     canvas.className = "unity-mobile";
   } else {
-    // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
     canvas.style.width = "960px";
     canvas.style.height = "600px";
   }
@@ -105,32 +119,44 @@
   document.querySelector("#unity-loading-bar").style.display = "block";
 
   var unityInstanceRef = null;
-  var simRunning = false;
   var playButton = document.querySelector("#unity-play-button");
+  var loadTerrainButton = document.querySelector("#load-terrain-btn");
 
-  function dockButtonToCorner() {
-    playButton.style.top = "auto";
-    playButton.style.left = "auto";
-    playButton.style.bottom = "12px";
-    playButton.style.right = "12px";
-    playButton.style.transform = "none";
-    playButton.style.padding = "8px 20px";
-    playButton.style.fontSize = "14px";
-  }
-
+  // ---- Play button ----
   playButton.onclick = () => {
     if (!unityInstanceRef) return;
-    if (simRunning) {
-      unityInstanceRef.SendMessage("SimulationController", "StopSimulation");
-      playButton.innerHTML = "&#9654;&nbsp;Play";
-    } else {
-      unityInstanceRef.SendMessage("SimulationController", "StartSimulation");
-      playButton.innerHTML = "&#10074;&#10074;&nbsp;Pause";
-      dockButtonToCorner(); // move out of the way after first start
-    }
-    simRunning = !simRunning;
+    unityInstanceRef.SendMessage("SimulationController", "StartSimulation");
+    playButton.remove();
+    loadTerrainButton.style.display = "block";
   };
 
+  // ---- Load New Terrain (.raw) ----
+  document.querySelector("#terrain-file").onchange = (e) => {
+    if (!unityInstanceRef) return;
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      // Convert the raw bytes to base64 so they survive the SendMessage
+      // string bridge into Unity.
+      const bytes = new Uint8Array(reader.result);
+      let binary = "";
+      const chunk = 0x8000; // build string in chunks to avoid stack limits
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+      }
+      const base64 = btoa(binary);
+      unityInstanceRef.SendMessage("SimulationController", "LoadTerrainRaw", base64);
+    };
+    reader.onerror = () => {
+      unityShowBanner("Could not read the selected file.", "error");
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = ""; // allow re-selecting the same file later
+  };
+
+  // ---- Load Unity ----
   var script = document.createElement("script");
   script.src = loaderUrl;
   script.onload = () => {
@@ -139,7 +165,6 @@
     }).then((unityInstance) => {
       unityInstanceRef = unityInstance;
       document.querySelector("#unity-loading-bar").style.display = "none";
-      // Reveal the play button only once Unity is fully loaded
       playButton.style.display = "block";
       document.querySelector("#unity-fullscreen-button").onclick = () => {
         unityInstance.SetFullscreen(1);
