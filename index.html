@@ -7,7 +7,6 @@
   <link rel="shortcut icon" href="TemplateData/favicon.ico">
   <link rel="stylesheet" href="TemplateData/style.css">
 </head>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata"></script>
 <body>
 <div id="unity-container" class="unity-desktop">
   <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
@@ -534,51 +533,6 @@
             });
   }
 
-
-  // Called from Unity through webBridge.jslib
-  window.updateBermChart = function(data)
-  {
-
-    let values = data
-            .split(",")
-            .map(Number);
-
-
-    if(values.length == 0)
-      return;
-
-
-    // First time or radius changed
-    if(
-            bermChart == null ||
-            bermChart.data.labels.length != values.length
-    )
-    {
-      if(bermChart != null)
-      {
-        bermChart.destroy();
-      }
-
-      createBermChart(values.length);
-    }
-
-
-    bermChart.data.datasets[0].data = values;
-
-
-    // update max/min from bermHeight slider
-    let height =
-            Number(
-                    document.getElementById("p-bermh").value
-            );
-
-
-    bermChart.options.scales.y.max = height;
-    bermChart.options.scales.y.min = -height;
-
-
-    bermChart.update("none");
-  };
 
 
   // create a default chart immediately
