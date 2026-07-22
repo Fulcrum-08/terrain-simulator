@@ -77,6 +77,13 @@
              min="1" max="10" step="1" value="2">
       <span class="param-val" id="v-bermr">2</span>
     </div>
+    <div class="param-divider"></div>
+    <div class="param-row" style="justify-content:space-between;">
+      <label style="flex:1 1 auto;">Berm Profile</label>
+      <button id="btn-berm-reset" class="mini-btn">Reset</button>
+    </div>
+    <canvas id="berm-chart" class="berm-chart"></canvas>
+    <div class="berm-hint">Drag inside the chart to shape the berm cross section</div>
   </div>
 
   <div id="unity-warning"> </div>
@@ -182,13 +189,7 @@
     align-items: center;
     margin-bottom: 8px;
   }
-  <div class="param-divider"></div>
-  <div class="param-row" style="justify-content:space-between;">
-  <label style="flex:1 1 auto;">Berm Profile</label>
-  <button id="btn-berm-reset" class="mini-btn">Reset</button>
-  </div>
-  <canvas id="berm-chart" class="berm-chart"></canvas>
-  <div class="berm-hint">Drag inside the chart to shape the berm cross section</div>
+
   .param-row:last-child {
     margin-bottom: 0;
   }
