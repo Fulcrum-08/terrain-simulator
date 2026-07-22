@@ -382,17 +382,17 @@
                       },
 
 
-              options:
+              ooptions:
                       {
-                        responsive:true,
-                        maintainAspectRatio:false,
+                        responsive: true,
+                        maintainAspectRatio: false,
 
                         scales:
                                 {
                                   y:
                                           {
-                                            min:-5,
-                                            max:5
+                                            min: -5,
+                                            max: 5
                                           }
                                 },
 
@@ -400,10 +400,24 @@
                                 {
                                   legend:
                                           {
-                                            display:true
+                                            display: true
+                                          },
+
+                                  dragData:
+                                          {
+                                            round: 2,
+
+                                            showTooltip: true,
+
+                                            dragY: true,
+
+                                            onDragEnd: function(e, datasetIndex, index, value)
+                                            {
+                                              sendBermProfileToUnity();
+                                            }
                                           }
                                 }
-                      }
+                       }
             });
   }
 
@@ -452,7 +466,21 @@
 
     bermChart.update("none");
   };
+  function sendBermProfileToUnity()
+  {
+    if(!unityInstanceRef || !bermChart)
+      return;
 
+    let values = bermChart.data.datasets[0].data;
+
+    let payload = values.join(",");
+
+    unityInstanceRef.SendMessage(
+            "SimulationController",
+            "SetBermProfile",
+            payload
+    );
+  }
 
   // create a default chart immediately
   createBermChart(5);
