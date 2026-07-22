@@ -407,6 +407,71 @@
   window.addEventListener("resize", resizeBermCanvas);
 
   resizeBermCanvas();
+
+  window.updateBermChart = function(data)
+  {
+    bermValues =
+            data
+                    .split(",")
+                    .map(Number);
+
+    drawBermProfile();
+  }
+  function getMouse(e)
+  {
+    const r = bermCanvas.getBoundingClientRect();
+
+    return {
+      x: e.clientX - r.left,
+      y: e.clientY - r.top
+    };
+  }
+  bermCanvas.onmousedown = function(e)
+  {
+    dragging = true;
+  }
+  window.onmouseup = function()
+  {
+    dragging = false;
+  }
+  bermCanvas.onmousemove = function(e)
+  {
+    if(!dragging)
+      return;
+
+    if(bermValues.length == 0)
+      return;
+
+    const m = getMouse(e);
+
+    const width =
+            bermCanvas.width /
+            bermValues.length;
+
+    const index =
+            Math.floor(m.x / width);
+
+    if(index < 0 || index >= bermValues.length)
+      return;
+
+    const value =
+            (0.5 - m.y / bermCanvas.height)
+            * 2
+            * bermHeight;
+
+    bermValues[index] = value;
+
+    drawBermProfile();
+
+    if(unityInstanceRef)
+    {
+      unityInstanceRef.SendMessage(
+              "SimulationController",
+              "SetBermProfile",
+              bermValues.join(",")
+      );
+    }
+  }
   document.body.appendChild(script);
 
 
