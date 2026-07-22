@@ -87,6 +87,37 @@
   </div>
 </div>
 <style>
+  .param-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.25);
+    margin: 10px 0;
+  }
+  .mini-btn {
+    padding: 3px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    color: #fff;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid #fff;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .mini-btn:hover { background: rgba(255,255,255,0.3); }
+  .berm-chart {
+    display: block;
+    width: 292px;
+    height: 130px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 4px;
+    touch-action: none;
+    cursor: crosshair;
+  }
+  .berm-hint {
+    margin-top: 6px;
+    font-size: 11px;
+    opacity: 0.7;
+  }
   #unity-play-button {
     display: none;
     position: absolute;
@@ -131,6 +162,7 @@
   }
 
   #param-panel {
+
     display: none;
     position: absolute;
     top: 52px;
@@ -150,6 +182,13 @@
     align-items: center;
     margin-bottom: 8px;
   }
+  <div class="param-divider"></div>
+  <div class="param-row" style="justify-content:space-between;">
+  <label style="flex:1 1 auto;">Berm Profile</label>
+  <button id="btn-berm-reset" class="mini-btn">Reset</button>
+  </div>
+  <canvas id="berm-chart" class="berm-chart"></canvas>
+  <div class="berm-hint">Drag inside the chart to shape the berm cross section</div>
   .param-row:last-child {
     margin-bottom: 0;
   }
@@ -285,7 +324,155 @@
     reader.readAsArrayBuffer(file);
     e.target.value = "";
   };
+  // ============================================================
+  //  Berm profile bar chart
+  //  bars = bermRadius*2+1, each bar ranges over +-bermHeightMeters
+  //  Browser -> Unity : SimulationController.SetBermProfile (CSV)
+  //  Unity -> browser : window.updateBermChart (from WebBridge.jslib)
+  // ============================================================
+  const BermChart = (function () {
+    const LW = 292, LH = 130;                 // logical size, matches CSS
+    const PAD_L = 30, PAD_R = 10, PAD_T = 12, PAD_B = 18;
 
+    let canvas, ctx, dpr = 1;
+    let radius = 2;                            // Unity default bermRadius
+    let heightM = 5;                           // Unity default bermHeightMeters
+    let profile = [];
+    let dragging = false;
+    let lastSent = "";
+    let onEdit = null;
+
+    function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+    function barCount() { return radius * 2 + 1; }
+    function safeH() { return heightM < 0.0001 ? 0.0001 : heightM; }
+
+    function plot() {
+      const left = PAD_L, right = LW - PAD_R, top = PAD_T, bottom = LH - PAD_B;
+      const w = right - left, h = bottom - top;
+      return { left, right, top, bottom, w, h, zeroY: top + h / 2, halfH: h / 2 };
+    }
+    function valueToY(v) { const p = plot(); return p.zeroY - (v / safeH()) * p.halfH; }
+    function yToValue(y) { const p = plot(); return clamp(((p.zeroY - y) / p.halfH) * safeH(), -heightM, heightM); }
+    function xToIndex(x) { const p = plot(); const cw = p.w / barCount(); return clamp(Math.floor((x - p.left) / cw), 0, barCount() - 1); }
+
+    function draw() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, LW, LH);
+      const p = plot(), n = barCount(), cw = p.w / n;
+
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.font = "10px sans-serif";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      const hLbl = Math.round(heightM * 10) / 10;
+      ctx.fillText("+" + hLbl, p.left - 4, p.top);
+      ctx.fillText("0", p.left - 4, p.zeroY);
+      ctx.fillText("-" + hLbl, p.left - 4, p.bottom);
+
+      ctx.strokeStyle = "rgba(255,255,255,0.15)";
+      ctx.lineWidth = 1;
+      [p.top, p.bottom].forEach(function (yy) {
+        ctx.beginPath(); ctx.moveTo(p.left, yy); ctx.lineTo(p.right, yy); ctx.stroke();
+      });
+      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.beginPath(); ctx.moveTo(p.left, p.zeroY); ctx.lineTo(p.right, p.zeroY); ctx.stroke();
+
+      for (let i = 0; i < n; i++) {
+        const v = profile[i] || 0;
+        const x = p.left + i * cw + cw * 0.15;
+        const bw = cw * 0.7;
+        const yv = valueToY(v);
+        const yTop = Math.min(yv, p.zeroY);
+        const bh = Math.abs(yv - p.zeroY);
+        ctx.fillStyle = v >= 0 ? "rgba(90,200,180,0.9)" : "rgba(220,140,90,0.9)";
+        ctx.fillRect(x, yTop, bw, Math.max(bh, 0.5));
+      }
+    }
+
+    function emit() {
+      const csv = profile.map(function (v) { return Math.round(v * 1000) / 1000; }).join(",");
+      if (csv === lastSent) return;
+      lastSent = csv;
+      if (typeof onEdit === "function") onEdit(csv);
+    }
+
+    function setAt(x, y) { profile[xToIndex(x)] = yToValue(y); draw(); emit(); }
+
+    function pointerXY(e) {
+      const r = canvas.getBoundingClientRect();
+      return { x: (e.clientX - r.left) * (LW / r.width), y: (e.clientY - r.top) * (LH / r.height) };
+    }
+
+    function init(el, editCb) {
+      canvas = el;
+      onEdit = editCb;
+      dpr = window.devicePixelRatio || 1;
+      canvas.width = LW * dpr;
+      canvas.height = LH * dpr;
+      ctx = canvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+      if (profile.length !== barCount()) profile = new Array(barCount()).fill(0);
+
+      canvas.addEventListener("pointerdown", function (e) {
+        dragging = true; canvas.setPointerCapture(e.pointerId);
+        const q = pointerXY(e); setAt(q.x, q.y);
+      });
+      canvas.addEventListener("pointermove", function (e) {
+        if (!dragging) return;
+        const q = pointerXY(e); setAt(q.x, q.y);
+      });
+      canvas.addEventListener("pointerup", function () { dragging = false; });
+      canvas.addEventListener("pointercancel", function () { dragging = false; });
+      draw();
+    }
+
+    return {
+      init: init,
+      setRadius: function (r) {                 // visual mirror of InitializeBermProfile
+        r = Math.max(1, Math.round(r));
+        if (r === radius) return;
+        radius = r;
+        profile = new Array(barCount()).fill(0);
+        lastSent = "";
+        draw();
+      },
+      setHeight: function (hm) {                 // rescale axis, re-clamp, push clamped values
+        heightM = hm;
+        for (let i = 0; i < profile.length; i++) profile[i] = clamp(profile[i], -heightM, heightM);
+        draw();
+        emit();
+      },
+      setProfileFromCSV: function (csv) {        // pushed from Unity, do not echo
+        if (dragging) return;
+        const parts = csv.split(",").map(parseFloat).filter(function (v) { return !isNaN(v); });
+        if (!parts.length) return;
+        profile = parts.map(function (v) { return clamp(v, -heightM, heightM); });
+        const impliedR = (profile.length - 1) / 2;
+        if (Number.isInteger(impliedR) && impliedR >= 1) radius = impliedR;
+        lastSent = profile.map(function (v) { return Math.round(v * 1000) / 1000; }).join(",");
+        draw();
+      },
+      reset: function () { profile = new Array(barCount()).fill(0); draw(); emit(); }
+    };
+  })();
+
+  function sendBermProfile(csv) {
+    if (!unityInstanceRef) return;
+    unityInstanceRef.SendMessage("SimulationController", "SetBermProfile", csv);
+  }
+
+  // Unity -> browser callback name must match WebBridge.jslib
+  window.updateBermChart = function (csv) { BermChart.setProfileFromCSV(csv); };
+
+  BermChart.init(document.querySelector("#berm-chart"), sendBermProfile);
+  document.querySelector("#btn-berm-reset").onclick = function () { BermChart.reset(); };
+
+  (function () {
+    const rSlider = document.querySelector("#p-bermr");
+    const hSlider = document.querySelector("#p-bermh");
+    if (rSlider) rSlider.addEventListener("input", function () { BermChart.setRadius(parseFloat(rSlider.value)); });
+    if (hSlider) hSlider.addEventListener("input", function () { BermChart.setHeight(parseFloat(hSlider.value)); });
+  })();
   // ---- Load Unity ----
   var script = document.createElement("script");
   script.src = loaderUrl;
