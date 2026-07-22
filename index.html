@@ -296,17 +296,10 @@
 
 
       // Update chart limits immediately
-      if(slider.dataset.param == "bermHeightMeters")
+      if (slider.dataset.param == "bermHeightMeters")
       {
-        if(bermChart)
-        {
-          let h = Number(slider.value);
-
-          bermChart.options.scales.y.max = h;
-          bermChart.options.scales.y.min = -h;
-
-          bermChart.update("none");
-        }
+        bermHeight = Number(slider.value);
+        drawBermProfile();
       }
 
     });
@@ -474,70 +467,7 @@
   document.body.appendChild(script);
 
 
-  // =====================================================
-  // BERM PROFILE CHART
-  // =====================================================
-
-  var bermChart = null;
-
-
-  // Create the chart
-  function createBermChart(size)
-  {
-    let ctx = document
-            .getElementById("bermChart")
-            .getContext("2d");
-
-
-    bermChart = new Chart(ctx,
-            {
-              type: "bar",
-
-              data:
-                      {
-                        labels: Array.from(
-                                {length:size},
-                                (_,i)=>i
-                        ),
-
-                        datasets:
-                                [{
-                                  label:"Berm Height (m)",
-                                  data:Array(size).fill(0)
-                                }]
-                      },
-
-
-              options:
-                      {
-                        responsive:true,
-                        maintainAspectRatio:false,
-
-                        scales:
-                                {
-                                  y:
-                                          {
-                                            min:-5,
-                                            max:5
-                                          }
-                                },
-
-                        plugins:
-                                {
-                                  legend:
-                                          {
-                                            display:true
-                                          }
-                                }
-                      }
-            });
-  }
-
-
-
-  // create a default chart immediately
-  createBermChart(5);
-
+  
 </script>
 </body>
 </html>
