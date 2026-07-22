@@ -7,8 +7,6 @@
   <link rel="shortcut icon" href="TemplateData/favicon.ico">
   <link rel="stylesheet" href="TemplateData/style.css">
 </head>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata"></script>
 <body>
 <div id="unity-container" class="unity-desktop">
   <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
@@ -29,11 +27,7 @@
     </label>
     <button id="btn-params" class="sim-btn">Parameters &#9662;</button>
   </div>
-  <div id="berm-container">
 
-    <canvas id="bermChart"></canvas>
-
-  </div>
   <div id="param-panel">
     <div class="param-row">
       <label for="p-rainfall">Rainfall</label>
@@ -135,15 +129,7 @@
   .sim-btn:hover {
     background: rgba(0, 0, 0, 0.85);
   }
-  #berm-container
-  {
-    position:absolute;
-    right:10px;
-    top:50px;
-    width:350px;
-    height:250px;
-    background:rgba(0,0,0,.7);
-  }
+
   #param-panel {
     display: none;
     position: absolute;
@@ -264,43 +250,16 @@
   // Every slider carries a data-param attribute naming the variable.
   // On input we send "name=value" to Unity, which applies it immediately.
   document.querySelectorAll("#param-panel input[type='range']").forEach((slider) => {
-
-    const valueLabel =
-            slider.parentElement.querySelector(".param-val");
-
-
+    const valueLabel = slider.parentElement.querySelector(".param-val");
     slider.addEventListener("input", () => {
-
       valueLabel.textContent = slider.value;
-
-
-      if (!unityInstanceRef)
-        return;
-
-
+      if (!unityInstanceRef) return;
       unityInstanceRef.SendMessage(
               "SimulationController",
               "SetParameter",
               slider.dataset.param + "=" + slider.value
       );
-
-
-      // Update chart limits immediately
-      if(slider.dataset.param == "bermHeightMeters")
-      {
-        if(bermChart)
-        {
-          let h = Number(slider.value);
-
-          bermChart.options.scales.y.max = h;
-          bermChart.options.scales.y.min = -h;
-
-          bermChart.update("none");
-        }
-      }
-
     });
-
   });
 
   // ---- Load New Terrain (.raw) ----
@@ -346,144 +305,6 @@
   };
 
   document.body.appendChild(script);
-
-
-  // =====================================================
-  // BERM PROFILE CHART
-  // =====================================================
-
-  var bermChart = null;
-
-
-  // Create the chart
-  function createBermChart(size)
-  {
-    let ctx = document
-            .getElementById("bermChart")
-            .getContext("2d");
-
-
-    bermChart = new Chart(ctx,
-            {
-              type: "bar",
-
-              data:
-                      {
-                        labels: Array.from(
-                                {length:size},
-                                (_,i)=>i
-                        ),
-
-                        datasets:
-                                [{
-                                  label:"Berm Height (m)",
-                                  data:Array(size).fill(0)
-                                }]
-                      },
-
-
-              ooptions:
-                      {
-                        responsive: true,
-                        maintainAspectRatio: false,
-
-                        scales:
-                                {
-                                  y:
-                                          {
-                                            min: -5,
-                                            max: 5
-                                          }
-                                },
-
-                        plugins:
-                                {
-                                  legend:
-                                          {
-                                            display: true
-                                          },
-
-                                  dragData:
-                                          {
-                                            round: 2,
-
-                                            showTooltip: true,
-
-                                            dragY: true,
-
-                                            onDragEnd: function(e, datasetIndex, index, value)
-                                            {
-                                              sendBermProfileToUnity();
-                                            }
-                                          }
-                                }
-                       }
-            });
-  }
-
-
-  // Called from Unity through webBridge.jslib
-  window.updateBermChart = function(data)
-  {
-
-    let values = data
-            .split(",")
-            .map(Number);
-
-
-    if(values.length == 0)
-      return;
-
-
-    // First time or radius changed
-    if(
-            bermChart == null ||
-            bermChart.data.labels.length != values.length
-    )
-    {
-      if(bermChart != null)
-      {
-        bermChart.destroy();
-      }
-
-      createBermChart(values.length);
-    }
-
-
-    bermChart.data.datasets[0].data = values;
-
-
-    // update max/min from bermHeight slider
-    let height =
-            Number(
-                    document.getElementById("p-bermh").value
-            );
-
-
-    bermChart.options.scales.y.max = height;
-    bermChart.options.scales.y.min = -height;
-
-
-    bermChart.update("none");
-  };
-  function sendBermProfileToUnity()
-  {
-    if(!unityInstanceRef || !bermChart)
-      return;
-
-    let values = bermChart.data.datasets[0].data;
-
-    let payload = values.join(",");
-
-    unityInstanceRef.SendMessage(
-            "SimulationController",
-            "SetBermProfile",
-            payload
-    );
-  }
-
-  // create a default chart immediately
-  createBermChart(5);
 
 </script>
 </body>
