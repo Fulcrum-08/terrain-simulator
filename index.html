@@ -32,8 +32,8 @@
 
   <!-- ============================================================
        THE WALLET
-       Charge is the currency. Every machine you put on site costs
-       up front, and every wheel revolution costs while it runs.
+       Charge is the currency. Machines cost to mobilise and cost
+       again for every wheel revolution they turn.
        ============================================================ -->
   <div id="wallet">
     <div class="wallet-eyebrow">Charge remaining</div>
@@ -42,7 +42,6 @@
       <span id="w-remaining">5.000</span><span class="wallet-unit">kWh</span>
     </div>
 
-    <!-- signature: discrete cells, not a bar. You spend units, not percent. -->
     <div class="cells" id="w-cells" aria-hidden="true"></div>
 
     <div class="wallet-ledger">
@@ -64,7 +63,11 @@
       </div>
     </div>
 
-    <div class="wallet-ledger wallet-yield">
+    <div class="wallet-ledger">
+      <div class="ledger-row">
+        <span class="ledger-key">Ground ripped</span>
+        <span class="ledger-val" id="w-ripped">0 m&sup2;</span>
+      </div>
       <div class="ledger-row">
         <span class="ledger-key">Soil moved</span>
         <span class="ledger-val" id="w-soil">0.00 m&sup3;</span>
@@ -76,18 +79,17 @@
     </div>
   </div>
 
-  <!-- Shown when the wallet hits zero. -->
   <div id="flat-overlay">
     <div class="flat-card">
       <div class="flat-eyebrow">Out of charge</div>
       <p class="flat-body">
-        The fleet has drawn its whole allocation. Nothing else moves until you
-        reset the site or raise the budget.
+        The fleet has drawn its whole allocation. Nothing moves until you reset
+        the site or raise the budget.
       </p>
       <div class="flat-stats">
         <div class="flat-stat">
           <span class="flat-num" id="f-soil">0.00</span>
-          <span class="flat-lbl">m&sup3; moved</span>
+          <span class="flat-lbl">bank m&sup3;</span>
         </div>
         <div class="flat-stat flat-stat-hero">
           <span class="flat-num" id="f-score">0.00</span>
@@ -99,14 +101,151 @@
         </div>
       </div>
       <p class="flat-hint">
-        Try a smaller fleet at higher torque, or a bigger one working shallower.
-        The same allocation can move very different amounts of dirt.
+        Rippers move no soil themselves, but ground they have been through cuts
+        four times as deep at a fraction of the resistance. The balance between
+        the two fleets is the whole puzzle.
       </p>
       <button id="btn-flat-reset" class="sim-btn flat-btn">Reset site</button>
     </div>
   </div>
 
   <div id="param-panel">
+    <div class="param-heading">Fleet</div>
+
+    <div class="param-row">
+      <label for="p-rippers">Rippers</label>
+      <input type="range" id="p-rippers" data-param="numLooseningAgents"
+             min="0" max="8" step="1" value="1">
+      <span class="param-val" id="v-rippers">1</span>
+    </div>
+    <div class="param-row">
+      <label for="p-dozers">Dozers</label>
+      <input type="range" id="p-dozers" data-param="numBermAgents"
+             min="0" max="8" step="1" value="1">
+      <span class="param-val" id="v-dozers">1</span>
+    </div>
+    <div class="param-note" id="fleet-note">
+      2 machines on site &middot; 0.50 kWh to mobilise
+    </div>
+
+    <div class="param-row">
+      <label for="p-budget">Energy budget</label>
+      <input type="range" id="p-budget" data-param="energyBudgetKWh"
+             min="0.5" max="200" step="0.5" value="5">
+      <span class="param-val" id="v-budget">5</span>
+    </div>
+    <div class="param-row">
+      <label for="p-deploy">Mobilise cost</label>
+      <input type="range" id="p-deploy" data-param="deployCostKWhPerMachine"
+             min="0" max="2" step="0.05" value="0.25">
+      <span class="param-val" id="v-deploy">0.25</span>
+    </div>
+
+    <div class="param-divider"></div>
+    <div class="param-heading">Drivetrain</div>
+
+    <div class="param-row">
+      <label for="p-torque">Motor torque (Nm)</label>
+      <input type="range" id="p-torque" data-param="maxMotorTorqueNM"
+             min="50" max="20000" step="10" value="210">
+      <span class="param-val" id="v-torque">210</span>
+    </div>
+    <div class="param-row">
+      <label for="p-power">Rated power (kW)</label>
+      <input type="range" id="p-power" data-param="motorRatedPowerKW"
+             min="10" max="500" step="5" value="150">
+      <span class="param-val" id="v-power">150</span>
+    </div>
+    <div class="param-note">
+      Torque is capped by rated power above base speed, so more torque only
+      buys pull at low speed. Past traction it spins the wheels and bills you.
+    </div>
+    <div class="param-row">
+      <label for="p-rolling">Rolling resistance</label>
+      <input type="range" id="p-rolling" data-param="rollingResistance"
+             min="0.02" max="0.25" step="0.005" value="0.09">
+      <span class="param-val" id="v-rolling">0.09</span>
+    </div>
+
+    <div class="param-divider"></div>
+    <div class="param-heading">Ripper</div>
+
+    <div class="param-row">
+      <label for="p-tilldepth">Tine depth (m)</label>
+      <input type="range" id="p-tilldepth" data-param="tillDepthM"
+             min="0.05" max="1" step="0.05" value="0.3">
+      <span class="param-val" id="v-tilldepth">0.3</span>
+    </div>
+    <div class="param-row">
+      <label for="p-tillwidth">Gang width (m)</label>
+      <input type="range" id="p-tillwidth" data-param="tillWidthM"
+             min="0.5" max="6" step="0.1" value="2">
+      <span class="param-val" id="v-tillwidth">2</span>
+    </div>
+    <div class="param-row">
+      <label for="p-tilldraft">Tine draft (kPa)</label>
+      <input type="range" id="p-tilldraft" data-param="tillageDraftPa"
+             min="5000" max="120000" step="1000" value="45000">
+      <span class="param-val" id="v-tilldraft">45000</span>
+    </div>
+    <div class="param-row">
+      <label for="p-tillradius">Patch radius</label>
+      <input type="range" id="p-tillradius" data-param="tillRadius"
+             min="1" max="10" step="1" value="2">
+      <span class="param-val" id="v-tillradius">2</span>
+    </div>
+
+    <div class="param-row" style="justify-content:space-between;">
+      <label style="flex:1 1 auto;">Tine profile</label>
+      <button id="btn-till-reset" class="mini-btn">Reset</button>
+    </div>
+    <canvas id="till-chart" class="till-chart"></canvas>
+    <div class="chart-hint">
+      Drag to shape how much compaction one pass removes, by distance from the
+      machine. 1.0 rips the ground fully in a single pass.
+    </div>
+
+    <div class="param-divider"></div>
+    <div class="param-heading">Dozer and soil</div>
+
+    <div class="param-row">
+      <label for="p-bladeh">Blade height (m)</label>
+      <input type="range" id="p-bladeh" data-param="bladeHeightM"
+             min="0.4" max="3" step="0.1" value="1.2">
+      <span class="param-val" id="v-bladeh">1.2</span>
+    </div>
+    <div class="param-note">
+      Sets blade capacity as width x height squared. A full blade ends the pass
+      early, which is why real dozers push short.
+    </div>
+    <div class="param-row">
+      <label for="p-cutres">Cut resistance (kPa)</label>
+      <input type="range" id="p-cutres" data-param="cuttingResistancePa"
+             min="5000" max="150000" step="1000" value="40000">
+      <span class="param-val" id="v-cutres">40000</span>
+    </div>
+    <div class="param-row">
+      <label for="p-virgin">Virgin bite</label>
+      <input type="range" id="p-virgin" data-param="virginCutFraction"
+             min="0.02" max="1" step="0.01" value="0.25">
+      <span class="param-val" id="v-virgin">0.25</span>
+    </div>
+    <div class="param-row">
+      <label for="p-density">Soil density</label>
+      <input type="range" id="p-density" data-param="soilBulkDensityKgM3"
+             min="900" max="2400" step="50" value="1600">
+      <span class="param-val" id="v-density">1600</span>
+    </div>
+    <div class="param-row">
+      <label for="p-swell">Swell factor</label>
+      <input type="range" id="p-swell" data-param="swellFactor"
+             min="1" max="1.6" step="0.01" value="1.25">
+      <span class="param-val" id="v-swell">1.25</span>
+    </div>
+
+    <div class="param-divider"></div>
+    <div class="param-heading">Rain</div>
+
     <div class="param-row">
       <label for="p-rainfall">Rainfall</label>
       <input type="range" id="p-rainfall" data-param="waterErosionRainfall"
@@ -140,74 +279,13 @@
     <div class="param-row">
       <label for="p-kc">Kc (capacity)</label>
       <input type="range" id="p-kc" data-param="Kc"
-             min="0" max="0.1" step="0.001" value="0.01">y
+             min="0" max="0.1" step="0.001" value="0.01">
       <span class="param-val" id="v-kc">0.01</span>
     </div>
-    <div class="param-row">
-      <label for="p-bermh">Berm height (m)</label>
-      <input type="range" id="p-bermh" data-param="bermHeightMeters"
-             min="0" max="20" step="0.5" value="5">
-      <span class="param-val" id="v-bermh">5</span>
-    </div>
-    <div class="param-row">
-      <label for="p-bermr">Berm radius</label>
-      <input type="range" id="p-bermr" data-param="bermRadius"
-             min="1" max="10" step="1" value="2">
-      <span class="param-val" id="v-bermr">2</span>
-    </div>
-
-    <div class="param-divider"></div>
-    <div class="param-heading">Allocation</div>
-
-    <div class="param-row">
-      <label for="p-budget">Energy budget</label>
-      <input type="range" id="p-budget" data-param="energyBudgetKWh"
-             min="0.5" max="5000" step="0.5" value="5">
-      <span class="param-val" id="v-budget">5</span>
-    </div>
-
-    <div class="param-row">
-      <label for="p-numAgents">Agent pairs</label>
-      <input type="range" id="p-numAgents" data-param="numAgents"
-             min="1" max="10" step="1" value="1">
-      <span class="param-val" id="v-numagents">1</span>
-    </div>
-    <div class="param-note" id="fleet-note">
-      2 machines on site &middot; 0.50 kWh to deploy
-    </div>
-
-    <div class="param-row">
-      <label for="p-bermtorque">Motor torque</label>
-      <input type="range" id="p-bermtorque" data-param="maxMotorTorqueNM"
-             min="1" max="20000" step="1" value="210">
-      <span class="param-val" id="v-bermtorque">210</span>
-    </div>
     <div class="param-note">
-      Too little and a loaded blade stalls. Too much and the tyres spin, which
-      costs charge and moves nothing.
+      Ripped ground erodes freely and virgin ground barely moves, so the tines
+      buy cheap digging at the price of a slope that washes.
     </div>
-
-    <div class="param-row">
-      <label for="p-bermmass">Soil mass</label>
-      <input type="range" id="p-bermmass" data-param="soilMass"
-             min="1" max="10" step="1" value="5">
-      <span class="param-val" id="v-bermmass">5</span>
-    </div>
-
-    <div class="param-row">
-      <label for="p-deploy">Deploy cost</label>
-      <input type="range" id="p-deploy" data-param="deployCostKWhPerMachine"
-             min="0" max="2" step="0.05" value="0.25">
-      <span class="param-val" id="v-deploy">0.25</span>
-    </div>
-
-    <div class="param-divider"></div>
-    <div class="param-row" style="justify-content:space-between;">
-      <label style="flex:1 1 auto;">Berm profile</label>
-      <button id="btn-berm-reset" class="mini-btn">Reset</button>
-    </div>
-    <canvas id="berm-chart" class="berm-chart"></canvas>
-    <div class="berm-hint">Drag inside the chart to shape the berm cross section</div>
   </div>
 
   <div id="unity-warning"> </div>
@@ -219,320 +297,155 @@
 </div>
 
 <style>
-  /* ============================================================
-     TOKENS
-     Palette is pulled from the berm chart already on this page:
-     its positive bars are teal, its negative bars are burnt clay.
-     The HUD reuses them so the whole interface reads as one thing.
-     ============================================================ */
   :root {
-    --ink:        #e9e6dc;   /* bone, print on a site drawing */
-    --ink-dim:    rgba(233, 230, 220, 0.55);
-    --ink-faint:  rgba(233, 230, 220, 0.28);
-    --panel:      rgba(6, 9, 8, 0.82);
-    --charge:     #4fd1a5;   /* same teal as the berm chart's positive bars */
-    --warn:       #e0a54b;   /* under a quarter tank */
-    --flat:       #d9614a;   /* same clay as the chart's negative bars */
-    --mono:       ui-monospace, "SFMono-Regular", "Roboto Mono", Menlo, Consolas, monospace;
+    --ink:       #e9e6dc;
+    --ink-dim:   rgba(233, 230, 220, 0.55);
+    --ink-faint: rgba(233, 230, 220, 0.28);
+    --panel:     rgba(6, 9, 8, 0.82);
+    --charge:    #4fd1a5;
+    --warn:      #e0a54b;
+    --flat:      #d9614a;
+    --mono:      ui-monospace, "SFMono-Regular", "Roboto Mono", Menlo, Consolas, monospace;
   }
 
-  /* ---- existing panel furniture ---- */
-  .param-divider {
-    height: 1px;
-    background: var(--ink-faint);
-    margin: 12px 0;
-  }
+  .param-divider { height: 1px; background: var(--ink-faint); margin: 14px 0; }
   .param-heading {
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-dim);
-    margin-bottom: 10px;
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-dim); margin-bottom: 10px;
   }
   .param-note {
-    font-size: 11px;
-    line-height: 1.45;
-    color: var(--ink-dim);
-    margin: -2px 0 10px 0;
+    font-size: 11px; line-height: 1.45; color: var(--ink-dim); margin: -2px 0 10px 0;
   }
   .mini-btn {
-    padding: 3px 10px;
-    font-size: 12px;
-    font-family: inherit;
-    color: var(--ink);
-    background: rgba(255,255,255,0.15);
-    border: 1px solid var(--ink);
-    border-radius: 4px;
-    cursor: pointer;
+    padding: 3px 10px; font-size: 12px; font-family: inherit; color: var(--ink);
+    background: rgba(255,255,255,0.15); border: 1px solid var(--ink);
+    border-radius: 4px; cursor: pointer;
   }
   .mini-btn:hover { background: rgba(255,255,255,0.3); }
-  .berm-chart {
-    display: block;
-    width: 292px;
-    height: 130px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.4);
-    border-radius: 4px;
-    touch-action: none;
-    cursor: crosshair;
+  .till-chart {
+    display: block; width: 292px; height: 110px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 4px; touch-action: none; cursor: crosshair;
   }
-  .berm-hint {
-    margin-top: 6px;
-    font-size: 11px;
-    opacity: 0.7;
+  .chart-hint {
+    margin: 6px 0 0; font-size: 11px; line-height: 1.45; color: var(--ink-dim);
   }
-  #unity-play-button {
-    display: none;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    padding: 18px 56px;
-    font-size: 24px;
-    font-family: inherit;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.65);
-    border: 2px solid #fff;
-    border-radius: 6px;
-    cursor: pointer;
-    z-index: 10;
-  }
-  #unity-play-button:hover { background: rgba(0, 0, 0, 0.85); }
 
-  #sim-controls {
-    display: none;
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 10;
+  #unity-play-button {
+    display: none; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); padding: 18px 56px; font-size: 24px;
+    font-family: inherit; color: #fff; background: rgba(0,0,0,0.65);
+    border: 2px solid #fff; border-radius: 6px; cursor: pointer; z-index: 10;
   }
+  #unity-play-button:hover { background: rgba(0,0,0,0.85); }
+
+  #sim-controls { display: none; position: absolute; top: 10px; left: 10px; z-index: 10; }
   .sim-btn {
-    display: inline-block;
-    padding: 8px 16px;
-    margin-right: 6px;
-    font-size: 14px;
-    font-family: inherit;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.65);
-    border: 1px solid #fff;
-    border-radius: 4px;
-    cursor: pointer;
+    display: inline-block; padding: 8px 16px; margin-right: 6px; font-size: 14px;
+    font-family: inherit; color: #fff; background: rgba(0,0,0,0.65);
+    border: 1px solid #fff; border-radius: 4px; cursor: pointer;
   }
-  .sim-btn:hover { background: rgba(0, 0, 0, 0.85); }
-  .sim-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-  .sim-btn:focus-visible,
-  .mini-btn:focus-visible,
-  #param-panel input:focus-visible {
-    outline: 2px solid var(--charge);
-    outline-offset: 2px;
+  .sim-btn:hover { background: rgba(0,0,0,0.85); }
+  .sim-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .sim-btn:focus-visible, .mini-btn:focus-visible, #param-panel input:focus-visible {
+    outline: 2px solid var(--charge); outline-offset: 2px;
   }
 
   #param-panel {
-    display: none;
-    position: absolute;
-    top: 52px;
-    left: 10px;
-    z-index: 10;
-    padding: 12px 14px;
-    background: rgba(0, 0, 0, 0.75);
-    border: 1px solid #fff;
-    border-radius: 6px;
-    color: #fff;
-    font-family: inherit;
-    font-size: 13px;
-    width: 320px;
-    max-height: calc(100% - 72px);
-    overflow-y: auto;
+    display: none; position: absolute; top: 52px; left: 10px; z-index: 10;
+    padding: 12px 14px; background: rgba(0,0,0,0.78); border: 1px solid #fff;
+    border-radius: 6px; color: #fff; font-family: inherit; font-size: 13px;
+    width: 320px; max-height: calc(100% - 76px); overflow-y: auto;
   }
-  .param-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-  .param-row:last-child { margin-bottom: 0; }
-  .param-row label { flex: 0 0 120px; }
-  .param-row input[type="range"] { flex: 1 1 auto; margin: 0 8px; }
+  .param-row { display: flex; align-items: center; margin-bottom: 8px; }
+  .param-row label { flex: 0 0 118px; }
+  .param-row input[type="range"] { flex: 1 1 auto; margin: 0 8px; min-width: 0; }
   .param-val {
-    flex: 0 0 48px;
-    text-align: right;
-    font-family: var(--mono);
-    font-variant-numeric: tabular-nums;
+    flex: 0 0 52px; text-align: right;
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
   }
 
-  /* ============================================================
-     WALLET
-     ============================================================ */
   #wallet {
-    display: none;
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 10;
-    width: 232px;
-    padding: 14px 16px 16px;
-    background: var(--panel);
-    border: 1px solid var(--ink-faint);
-    border-radius: 6px;
-    color: var(--ink);
+    display: none; position: absolute; top: 10px; right: 10px; z-index: 10;
+    width: 232px; padding: 14px 16px 16px; background: var(--panel);
+    border: 1px solid var(--ink-faint); border-radius: 6px; color: var(--ink);
     font-family: inherit;
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
   }
-
   .wallet-eyebrow {
-    font-size: 10px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
     color: var(--ink-dim);
   }
-
   .wallet-figure {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    margin: 4px 0 12px;
-    font-family: var(--mono);
-    font-variant-numeric: tabular-nums;
-    font-size: 34px;
-    line-height: 1;
-    letter-spacing: -0.02em;
-    color: var(--charge);
-    transition: color 0.3s ease;
+    display: flex; align-items: baseline; gap: 6px; margin: 4px 0 12px;
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 34px; line-height: 1; letter-spacing: -0.02em;
+    color: var(--charge); transition: color 0.3s ease;
   }
-  .wallet-unit {
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    color: var(--ink-dim);
-  }
+  .wallet-unit { font-size: 12px; letter-spacing: 0.08em; color: var(--ink-dim); }
 
-  /* the signature element: 40 discrete charge cells */
-  .cells {
-    display: flex;
-    gap: 2px;
-    height: 14px;
-    margin-bottom: 14px;
-  }
+  .cells { display: flex; gap: 2px; height: 14px; margin-bottom: 14px; }
   .cell {
-    flex: 1 1 0;
-    background: rgba(233, 230, 220, 0.10);
+    flex: 1 1 0; background: rgba(233,230,220,0.10);
     transition: background-color 0.18s linear;
   }
   .cell.lit { background: var(--charge); }
 
-  #wallet.warn  .wallet-figure { color: var(--warn); }
-  #wallet.warn  .cell.lit      { background: var(--warn); }
-  #wallet.flat  .wallet-figure { color: var(--flat); }
-  #wallet.flat  .cell.lit      { background: var(--flat); }
+  #wallet.warn .wallet-figure { color: var(--warn); }
+  #wallet.warn .cell.lit      { background: var(--warn); }
+  #wallet.flat .wallet-figure { color: var(--flat); }
+  #wallet.flat .cell.lit      { background: var(--flat); }
 
   .wallet-ledger {
-    border-top: 1px solid var(--ink-faint);
-    padding-top: 9px;
-    margin-top: 9px;
+    border-top: 1px solid var(--ink-faint); padding-top: 9px; margin-top: 9px;
   }
   .wallet-ledger:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
-
   .ledger-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 5px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 10px; margin-bottom: 5px;
   }
   .ledger-row:last-child { margin-bottom: 0; }
   .ledger-key {
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--ink-dim);
   }
   .ledger-val {
-    font-family: var(--mono);
-    font-variant-numeric: tabular-nums;
-    font-size: 12px;
+    font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12px;
   }
-  .ledger-headline .ledger-val {
-    font-size: 15px;
-    color: var(--charge);
-  }
+  .ledger-headline .ledger-val { font-size: 15px; color: var(--charge); }
   #wallet.flat .ledger-headline .ledger-val { color: var(--flat); }
 
-  /* ============================================================
-     FLAT OVERLAY
-     ============================================================ */
   #flat-overlay {
-    display: none;
-    position: absolute;
-    inset: 0;
-    z-index: 20;
-    background: rgba(4, 6, 6, 0.72);
-    -webkit-backdrop-filter: blur(3px);
-    backdrop-filter: blur(3px);
-    align-items: center;
-    justify-content: center;
+    display: none; position: absolute; inset: 0; z-index: 20;
+    background: rgba(4,6,6,0.72);
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+    align-items: center; justify-content: center;
   }
   #flat-overlay.shown { display: flex; }
-
   .flat-card {
-    width: 400px;
-    max-width: calc(100% - 40px);
-    padding: 26px 28px 24px;
-    background: var(--panel);
-    border: 1px solid var(--ink-faint);
-    border-radius: 6px;
-    color: var(--ink);
-    font-family: inherit;
+    width: 400px; max-width: calc(100% - 40px); padding: 26px 28px 24px;
+    background: var(--panel); border: 1px solid var(--ink-faint);
+    border-radius: 6px; color: var(--ink); font-family: inherit;
   }
   .flat-eyebrow {
-    font-size: 11px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--flat);
-    margin-bottom: 10px;
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--flat); margin-bottom: 10px;
   }
-  .flat-body {
-    margin: 0 0 20px;
-    font-size: 13px;
-    line-height: 1.55;
-    color: var(--ink-dim);
-  }
+  .flat-body { margin: 0 0 20px; font-size: 13px; line-height: 1.55; color: var(--ink-dim); }
   .flat-stats {
-    display: flex;
-    gap: 8px;
-    padding: 16px 0;
-    border-top: 1px solid var(--ink-faint);
-    border-bottom: 1px solid var(--ink-faint);
+    display: flex; gap: 8px; padding: 16px 0;
+    border-top: 1px solid var(--ink-faint); border-bottom: 1px solid var(--ink-faint);
   }
-  .flat-stat {
-    flex: 1 1 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
+  .flat-stat { flex: 1 1 0; display: flex; flex-direction: column; gap: 4px; }
   .flat-num {
-    font-family: var(--mono);
-    font-variant-numeric: tabular-nums;
-    font-size: 20px;
-    line-height: 1;
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 20px; line-height: 1;
   }
-  .flat-stat-hero .flat-num {
-    font-size: 26px;
-    color: var(--charge);
-  }
+  .flat-stat-hero .flat-num { font-size: 26px; color: var(--charge); }
   .flat-lbl {
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-dim);
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-dim);
   }
-  .flat-hint {
-    margin: 18px 0 20px;
-    font-size: 12px;
-    line-height: 1.55;
-    color: var(--ink-dim);
-  }
+  .flat-hint { margin: 18px 0 20px; font-size: 12px; line-height: 1.55; color: var(--ink-dim); }
   .flat-btn { margin: 0; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -604,7 +517,6 @@
     else unityInstanceRef.SendMessage("SimulationController", method, arg);
   }
 
-  // ---- Play button: first start ----
   playButton.onclick = () => {
     if (!unityInstanceRef) return;
     send("StartSimulation");
@@ -613,10 +525,9 @@
     wallet.style.display = "block";
   };
 
-  // ---- Run control ----
-  document.querySelector("#btn-pause").onclick  = () => send("StopSimulation");
-  resumeBtn.onclick                             = () => send("StartSimulation");
-  document.querySelector("#btn-erode").onclick  = () => send("RunErosion");
+  document.querySelector("#btn-pause").onclick = () => send("StopSimulation");
+  resumeBtn.onclick                            = () => send("StartSimulation");
+  document.querySelector("#btn-erode").onclick = () => send("RunErosion");
 
   function resetSite() {
     send("ResetSimulation");
@@ -626,15 +537,13 @@
   document.querySelector("#btn-reset").onclick      = resetSite;
   document.querySelector("#btn-flat-reset").onclick = resetSite;
 
-  // ---- Parameters panel toggle ----
   document.querySelector("#btn-params").onclick = () => {
     paramPanel.style.display =
             (paramPanel.style.display === "block") ? "none" : "block";
   };
 
-  // ---- Realtime parameter sliders ----
-  // Every slider carries a data-param attribute naming the variable.
-  // On input we send "name=value" to Unity, which applies it immediately.
+  // Every slider carries a data-param naming the C# variable. On input we send
+  // "name=value" and Unity applies it immediately.
   document.querySelectorAll("#param-panel input[type='range']").forEach((slider) => {
     const valueLabel = slider.parentElement.querySelector(".param-val");
     slider.addEventListener("input", () => {
@@ -643,7 +552,6 @@
     });
   });
 
-  // ---- Load new terrain (.raw) ----
   document.querySelector("#terrain-file").onchange = (e) => {
     if (!unityInstanceRef) return;
     const file = e.target.files[0];
@@ -657,48 +565,40 @@
       for (let i = 0; i < bytes.length; i += chunk) {
         binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
       }
-      const base64 = btoa(binary);
-      send("LoadTerrainRaw", base64);
+      send("LoadTerrainRaw", btoa(binary));
       EnergyHUD.clearBurn();
       flatOverlay.classList.remove("shown");
     };
-    reader.onerror = () => {
-      unityShowBanner("Could not read the selected file.", "error");
-    };
+    reader.onerror = () => unityShowBanner("Could not read the selected file.", "error");
     reader.readAsArrayBuffer(file);
     e.target.value = "";
   };
 
   // ============================================================
   //  ENERGY WALLET
-  //  Unity pushes a JSON blob at 5 Hz through WebBridge.jslib ->
-  //  window.updateEnergyStats. Everything here is display only;
-  //  the ledger itself lives in main.cs.
+  //  Unity pushes JSON at 5 Hz through WebBridge.jslib ->
+  //  window.updateEnergyStats. Display only; the ledger is in C#.
   // ============================================================
   const EnergyHUD = (function () {
     const CELL_COUNT = 40;
-    const WARN_AT    = 0.25;      // fraction of budget left
+    const WARN_AT    = 0.25;
 
     let cells = [];
-    let burnAnchor = null;        // { t, spent } for the burn-rate derivative
+    let burnAnchor = null;
 
-    function buildCells() {
+    (function buildCells() {
       const host = document.querySelector("#w-cells");
-      host.innerHTML = "";
-      cells = [];
       for (let i = 0; i < CELL_COUNT; i++) {
         const d = document.createElement("div");
         d.className = "cell lit";
         host.appendChild(d);
         cells.push(d);
       }
-    }
+    })();
 
     function paintCells(fracLeft) {
       const lit = Math.round(Math.max(0, Math.min(1, fracLeft)) * CELL_COUNT);
-      for (let i = 0; i < CELL_COUNT; i++) {
-        cells[i].classList.toggle("lit", i < lit);
-      }
+      for (let i = 0; i < CELL_COUNT; i++) cells[i].classList.toggle("lit", i < lit);
     }
 
     function clearBurn() {
@@ -706,9 +606,9 @@
       document.querySelector("#w-burn").textContent = "\u2014";
     }
 
-    // Burn rate is a derivative over wall time, so it is only meaningful while
-    // the sim is actually running. Pausing drops the anchor rather than
-    // averaging a stall into the number.
+    // Burn rate is a derivative over wall time, so it only means anything
+    // while the sim runs. Pausing drops the anchor rather than averaging a
+    // stall into the number.
     function burnRate(s) {
       if (!s.running) { burnAnchor = null; return null; }
 
@@ -718,14 +618,11 @@
         return null;
       }
 
-      const dt = (now - burnAnchor.t) / 60000;   // minutes
-      if (dt < 0.05) return null;                // need ~3s before it settles
+      const dt = (now - burnAnchor.t) / 60000;
+      if (dt < 0.05) return null;
 
       const rate = (s.spent - burnAnchor.spent) / dt;
-
-      // slide the anchor so the figure tracks the current fleet, not the whole run
       if (dt > 0.5) burnAnchor = { t: now, spent: s.spent };
-
       return rate;
     }
 
@@ -736,11 +633,11 @@
       document.querySelector("#w-budget").textContent    = s.budget.toFixed(3);
       document.querySelector("#w-deploy").textContent    = s.deploy.toFixed(3);
       document.querySelector("#w-operate").textContent   = s.operate.toFixed(3);
+      document.querySelector("#w-ripped").textContent    = Math.round(s.ripped) + " m\u00B2";
       document.querySelector("#w-soil").textContent      = s.soil.toFixed(2) + " m\u00B3";
       document.querySelector("#w-score").textContent     = s.score.toFixed(2) + " m\u00B3/kWh";
 
       paintCells(fracLeft);
-
       wallet.classList.toggle("flat", !!s.flat);
       wallet.classList.toggle("warn", !s.flat && fracLeft <= WARN_AT);
 
@@ -749,9 +646,8 @@
       if (s.flat) {
         burnEl.textContent = "0.000 kWh/min";
       } else if (rate !== null && rate > 1e-6) {
-        const minsLeft = s.remaining / rate;
         burnEl.textContent = rate.toFixed(3) + " kWh/min \u00B7 "
-                + minsLeft.toFixed(1) + "m";
+                + (s.remaining / rate).toFixed(1) + "m";
       } else if (rate !== null) {
         burnEl.textContent = "0.000 kWh/min";
       }
@@ -768,103 +664,94 @@
       }
     }
 
-    buildCells();
     return { apply: apply, clearBurn: clearBurn };
   })();
 
-  // Unity -> browser callback name must match WebBridge.jslib
   window.updateEnergyStats = function (json) {
     let s;
     try { s = JSON.parse(json); } catch (e) { return; }
     EnergyHUD.apply(s);
   };
 
-  // ---- Fleet cost preview, so the purchase is visible before it is made ----
+  // ---- fleet cost preview, so the purchase is visible before it is made ----
   (function () {
-    const agentSlider  = document.querySelector("#p-numAgents");
-    const deploySlider = document.querySelector("#p-deploy");
-    const note         = document.querySelector("#fleet-note");
+    const rippers = document.querySelector("#p-rippers");
+    const dozers  = document.querySelector("#p-dozers");
+    const cost    = document.querySelector("#p-deploy");
+    const note    = document.querySelector("#fleet-note");
 
     function refresh() {
-      // Unity spawns one loosening agent AND one berm agent per "pair"
-      const machines = parseInt(agentSlider.value, 10) * 2;
-      const cost     = machines * parseFloat(deploySlider.value);
+      const machines = parseInt(rippers.value, 10) + parseInt(dozers.value, 10);
+      const kwh = machines * parseFloat(cost.value);
       note.textContent = machines + " machines on site \u00B7 "
-              + cost.toFixed(2) + " kWh to deploy";
+              + kwh.toFixed(2) + " kWh to mobilise";
     }
 
-    agentSlider.addEventListener("input", refresh);
-    deploySlider.addEventListener("input", refresh);
+    [rippers, dozers, cost].forEach(el => el.addEventListener("input", refresh));
     refresh();
   })();
 
   // ============================================================
-  //  Berm profile bar chart
-  //  bars = bermRadius*2+1, each bar ranges over +-bermHeightMeters
-  //  Browser -> Unity : SimulationController.SetBermProfile (CSV)
-  //  Unity -> browser : window.updateBermChart (from WebBridge.jslib)
+  //  TILLAGE PROFILE CHART
+  //  Bars = tillRadius*2+1. Each bar is the FRACTION of compaction
+  //  one ripper pass removes at that ring, so the axis is 0..1.
+  //  Browser -> Unity : SimulationController.SetTillProfile (CSV)
+  //  Unity -> browser : window.updateTillChart (WebBridge.jslib)
   // ============================================================
-  const BermChart = (function () {
-    const LW = 292, LH = 130;                 // logical size, matches CSS
-    const PAD_L = 30, PAD_R = 10, PAD_T = 12, PAD_B = 18;
+  const TillChart = (function () {
+    const LW = 292, LH = 110;
+    const PAD_L = 26, PAD_R = 10, PAD_T = 10, PAD_B = 16;
 
     let canvas, ctx, dpr = 1;
-    let radius = 2;                            // Unity default bermRadius
-    let heightM = 5;                           // Unity default bermHeightMeters
+    let radius = 2;
     let profile = [];
     let dragging = false;
     let lastSent = "";
     let onEdit = null;
 
-    function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+    function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
     function barCount() { return radius * 2 + 1; }
-    function safeH() { return heightM < 0.0001 ? 0.0001 : heightM; }
 
     function plot() {
       const left = PAD_L, right = LW - PAD_R, top = PAD_T, bottom = LH - PAD_B;
-      const w = right - left, h = bottom - top;
-      return { left, right, top, bottom, w, h, zeroY: top + h / 2, halfH: h / 2 };
+      return { left, right, top, bottom, w: right - left, h: bottom - top };
     }
-    function valueToY(v) { const p = plot(); return p.zeroY - (v / safeH()) * p.halfH; }
-    function yToValue(y) { const p = plot(); return clamp(((p.zeroY - y) / p.halfH) * safeH(), -heightM, heightM); }
-    function xToIndex(x) { const p = plot(); const cw = p.w / barCount(); return clamp(Math.floor((x - p.left) / cw), 0, barCount() - 1); }
+    function valueToY(v) { const p = plot(); return p.bottom - v * p.h; }
+    function yToValue(y) { const p = plot(); return clamp01((p.bottom - y) / p.h); }
+    function xToIndex(x) {
+      const p = plot(), cw = p.w / barCount();
+      return Math.max(0, Math.min(barCount() - 1, Math.floor((x - p.left) / cw)));
+    }
 
     function draw() {
       if (!ctx) return;
       ctx.clearRect(0, 0, LW, LH);
       const p = plot(), n = barCount(), cw = p.w / n;
 
-      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.fillStyle = "rgba(233,230,220,0.7)";
       ctx.font = "10px sans-serif";
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      const hLbl = Math.round(heightM * 10) / 10;
-      ctx.fillText("+" + hLbl, p.left - 4, p.top);
-      ctx.fillText("0", p.left - 4, p.zeroY);
-      ctx.fillText("-" + hLbl, p.left - 4, p.bottom);
+      ctx.fillText("1.0", p.left - 4, p.top);
+      ctx.fillText("0", p.left - 4, p.bottom);
 
-      ctx.strokeStyle = "rgba(255,255,255,0.15)";
+      ctx.strokeStyle = "rgba(233,230,220,0.18)";
       ctx.lineWidth = 1;
       [p.top, p.bottom].forEach(function (yy) {
         ctx.beginPath(); ctx.moveTo(p.left, yy); ctx.lineTo(p.right, yy); ctx.stroke();
       });
-      ctx.strokeStyle = "rgba(255,255,255,0.5)";
-      ctx.beginPath(); ctx.moveTo(p.left, p.zeroY); ctx.lineTo(p.right, p.zeroY); ctx.stroke();
 
       for (let i = 0; i < n; i++) {
         const v = profile[i] || 0;
         const x = p.left + i * cw + cw * 0.15;
-        const bw = cw * 0.7;
         const yv = valueToY(v);
-        const yTop = Math.min(yv, p.zeroY);
-        const bh = Math.abs(yv - p.zeroY);
-        ctx.fillStyle = v >= 0 ? "rgba(79,209,165,0.9)" : "rgba(217,97,74,0.9)";
-        ctx.fillRect(x, yTop, bw, Math.max(bh, 0.5));
+        ctx.fillStyle = "rgba(79,209,165,0.9)";
+        ctx.fillRect(x, yv, cw * 0.7, Math.max(p.bottom - yv, 0.5));
       }
     }
 
     function emit() {
-      const csv = profile.map(function (v) { return Math.round(v * 1000) / 1000; }).join(",");
+      const csv = profile.map(v => Math.round(v * 1000) / 1000).join(",");
       if (csv === lastSent) return;
       lastSent = csv;
       if (typeof onEdit === "function") onEdit(csv);
@@ -874,7 +761,17 @@
 
     function pointerXY(e) {
       const r = canvas.getBoundingClientRect();
-      return { x: (e.clientX - r.left) * (LW / r.width), y: (e.clientY - r.top) * (LH / r.height) };
+      return { x: (e.clientX - r.left) * (LW / r.width),
+        y: (e.clientY - r.top) * (LH / r.height) };
+    }
+
+    function defaultShape() {
+      const n = barCount(), arr = new Array(n);
+      for (let i = 0; i < n; i++) {
+        const t = radius > 0 ? Math.abs(i - radius) / radius : 0;
+        arr[i] = 0.35 * Math.exp(-2 * t * t);
+      }
+      return arr;
     }
 
     function init(el, editCb) {
@@ -885,7 +782,7 @@
       canvas.height = LH * dpr;
       ctx = canvas.getContext("2d");
       ctx.scale(dpr, dpr);
-      if (profile.length !== barCount()) profile = new Array(barCount()).fill(0);
+      profile = defaultShape();
 
       canvas.addEventListener("pointerdown", function (e) {
         dragging = true; canvas.setPointerCapture(e.pointerId);
@@ -902,48 +799,39 @@
 
     return {
       init: init,
-      setRadius: function (r) {                 // visual mirror of InitializeBermProfile
+      setRadius: function (r) {
         r = Math.max(1, Math.round(r));
         if (r === radius) return;
         radius = r;
-        profile = new Array(barCount()).fill(0);
+        profile = defaultShape();
         lastSent = "";
-        draw();
-      },
-      setHeight: function (hm) {                 // rescale axis, re-clamp, push clamped values
-        heightM = hm;
-        for (let i = 0; i < profile.length; i++) profile[i] = clamp(profile[i], -heightM, heightM);
         draw();
         emit();
       },
-      setProfileFromCSV: function (csv) {        // pushed from Unity, do not echo
+      setProfileFromCSV: function (csv) {      // pushed from Unity, do not echo
         if (dragging) return;
-        const parts = csv.split(",").map(parseFloat).filter(function (v) { return !isNaN(v); });
+        const parts = csv.split(",").map(parseFloat).filter(v => !isNaN(v));
         if (!parts.length) return;
-        profile = parts.map(function (v) { return clamp(v, -heightM, heightM); });
+        profile = parts.map(clamp01);
         const impliedR = (profile.length - 1) / 2;
         if (Number.isInteger(impliedR) && impliedR >= 1) radius = impliedR;
-        lastSent = profile.map(function (v) { return Math.round(v * 1000) / 1000; }).join(",");
+        lastSent = profile.map(v => Math.round(v * 1000) / 1000).join(",");
         draw();
       },
-      reset: function () { profile = new Array(barCount()).fill(0); draw(); emit(); }
+      reset: function () { profile = defaultShape(); draw(); emit(); }
     };
   })();
 
-  function sendBermProfile(csv) { send("SetBermProfile", csv); }
+  window.updateTillChart = function (csv) { TillChart.setProfileFromCSV(csv); };
 
-  // Unity -> browser callback name must match WebBridge.jslib
-  window.updateBermChart = function (csv) { BermChart.setProfileFromCSV(csv); };
+  TillChart.init(document.querySelector("#till-chart"),
+          function (csv) { send("SetTillProfile", csv); });
 
-  BermChart.init(document.querySelector("#berm-chart"), sendBermProfile);
-  document.querySelector("#btn-berm-reset").onclick = function () { BermChart.reset(); };
+  document.querySelector("#btn-till-reset").onclick = function () { TillChart.reset(); };
 
-  (function () {
-    const rSlider = document.querySelector("#p-bermr");
-    const hSlider = document.querySelector("#p-bermh");
-    if (rSlider) rSlider.addEventListener("input", function () { BermChart.setRadius(parseFloat(rSlider.value)); });
-    if (hSlider) hSlider.addEventListener("input", function () { BermChart.setHeight(parseFloat(hSlider.value)); });
-  })();
+  document.querySelector("#p-tillradius").addEventListener("input", function (e) {
+    TillChart.setRadius(parseFloat(e.target.value));
+  });
 
   // ---- Load Unity ----
   var script = document.createElement("script");
@@ -958,13 +846,10 @@
       document.querySelector("#unity-fullscreen-button").onclick = () => {
         unityInstance.SetFullscreen(1);
       };
-    }).catch((message) => {
-      alert(message);
-    });
+    }).catch((message) => alert(message));
   };
 
   document.body.appendChild(script);
-
 </script>
 </body>
 </html>
