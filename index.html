@@ -1,970 +1,133 @@
 <!DOCTYPE html>
 <html lang="en-us">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <title>Unity Web Player | Erosion</title>
-  <link rel="shortcut icon" href="TemplateData/favicon.ico">
-  <link rel="stylesheet" href="TemplateData/style.css">
-</head>
-<body>
-<div id="unity-container" class="unity-desktop">
-  <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
-  <div id="unity-loading-bar">
-    <div id="unity-logo"></div>
-    <div id="unity-progress-bar-empty">
-      <div id="unity-progress-bar-full"></div>
-    </div>
-  </div>
-  <button id="unity-play-button">&#9654;&nbsp;Play</button>
-
-  <div id="sim-controls">
-    <button id="btn-pause" class="sim-btn">Pause</button>
-    <button id="btn-resume" class="sim-btn">Resume</button>
-    <button id="btn-reset" class="sim-btn">Reset site</button>
-    <button id="btn-erode" class="sim-btn">Run rain</button>
-    <label class="sim-btn">
-      Load new terrain
-      <input type="file" id="terrain-file" accept=".raw" style="display:none;">
-    </label>
-    <button id="btn-params" class="sim-btn">Parameters &#9662;</button>
-  </div>
-
-  <!-- ============================================================
-       THE WALLET
-       Charge is the currency. Every machine you put on site costs
-       up front, and every wheel revolution costs while it runs.
-       ============================================================ -->
-  <div id="wallet">
-    <div class="wallet-eyebrow">Charge remaining</div>
-
-    <div class="wallet-figure">
-      <span id="w-remaining">5.000</span><span class="wallet-unit">kWh</span>
-    </div>
-
-    <!-- signature: discrete cells, not a bar. You spend units, not percent. -->
-    <div class="cells" id="w-cells" aria-hidden="true"></div>
-
-    <div class="wallet-ledger">
-      <div class="ledger-row">
-        <span class="ledger-key">Budget</span>
-        <span class="ledger-val" id="w-budget">5.000</span>
-      </div>
-      <div class="ledger-row">
-        <span class="ledger-key">Fleet on site</span>
-        <span class="ledger-val" id="w-deploy">0.000</span>
-      </div>
-      <div class="ledger-row">
-        <span class="ledger-key">Running cost</span>
-        <span class="ledger-val" id="w-operate">0.000</span>
-      </div>
-      <div class="ledger-row">
-        <span class="ledger-key">Burn rate</span>
-        <span class="ledger-val" id="w-burn">&mdash;</span>
-      </div>
-    </div>
-
-    <div class="wallet-ledger wallet-yield">
-      <div class="ledger-row">
-        <span class="ledger-key">Soil moved</span>
-        <span class="ledger-val" id="w-soil">0.00 m&sup3;</span>
-      </div>
-      <div class="ledger-row ledger-headline">
-        <span class="ledger-key">Yield</span>
-        <span class="ledger-val" id="w-score">0.00 m&sup3;/kWh</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Shown when the wallet hits zero. -->
-  <div id="flat-overlay">
-    <div class="flat-card">
-      <div class="flat-eyebrow">Out of charge</div>
-      <p class="flat-body">
-        The fleet has drawn its whole allocation. Nothing else moves until you
-        reset the site or raise the budget.
-      </p>
-      <div class="flat-stats">
-        <div class="flat-stat">
-          <span class="flat-num" id="f-soil">0.00</span>
-          <span class="flat-lbl">m&sup3; moved</span>
-        </div>
-        <div class="flat-stat flat-stat-hero">
-          <span class="flat-num" id="f-score">0.00</span>
-          <span class="flat-lbl">m&sup3; per kWh</span>
-        </div>
-        <div class="flat-stat">
-          <span class="flat-num" id="f-spent">0.00</span>
-          <span class="flat-lbl">kWh spent</span>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity Web Player | Erosion</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
         </div>
       </div>
-      <p class="flat-hint">
-        Try a smaller fleet at higher torque, or a bigger one working shallower.
-        The same allocation can move very different amounts of dirt.
-      </p>
-      <button id="btn-flat-reset" class="sim-btn flat-btn">Reset site</button>
+      <div id="unity-warning"> </div>
+      <div id="unity-footer">
+        <div id="unity-logo-title-footer"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">Erosion</div>
+      </div>
     </div>
-  </div>
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
 
-  <div id="param-panel">
-    <div class="param-row">
-      <label for="p-rainfall">Rainfall</label>
-      <input type="range" id="p-rainfall" data-param="waterErosionRainfall"
-             min="0" max="5" step="0.1" value="1">
-      <span class="param-val" id="v-rainfall">1</span>
-    </div>
-    <div class="param-row">
-      <label for="p-flowiter">Flow iterations</label>
-      <input type="range" id="p-flowiter" data-param="waterFlowIterations"
-             min="1" max="1000" step="1" value="100">
-      <span class="param-val" id="v-flowiter">100</span>
-    </div>
-    <div class="param-row">
-      <label for="p-cone">Cone threshold</label>
-      <input type="range" id="p-cone" data-param="waterErosionConeThreshold"
-             min="0.1" max="10" step="0.1" value="2">
-      <span class="param-val" id="v-cone">2</span>
-    </div>
-    <div class="param-row">
-      <label for="p-kd">Kd (deposition)</label>
-      <input type="range" id="p-kd" data-param="Kd"
-             min="0" max="0.1" step="0.001" value="0.01">
-      <span class="param-val" id="v-kd">0.01</span>
-    </div>
-    <div class="param-row">
-      <label for="p-ks">Ks (erosion)</label>
-      <input type="range" id="p-ks" data-param="Ks"
-             min="0" max="0.1" step="0.001" value="0.01">
-      <span class="param-val" id="v-ks">0.01</span>
-    </div>
-    <div class="param-row">
-      <label for="p-kc">Kc (capacity)</label>
-      <input type="range" id="p-kc" data-param="Kc"
-             min="0" max="0.1" step="0.001" value="0.01">
-      <span class="param-val" id="v-kc">0.01</span>
-    </div>
-    <div class="param-row">
-      <label for="p-bermh">Berm height (m)</label>
-      <input type="range" id="p-bermh" data-param="bermHeightMeters"
-             min="0" max="20" step="0.5" value="5">
-      <span class="param-val" id="v-bermh">5</span>
-    </div>
-    <div class="param-row">
-      <label for="p-bermr">Berm radius</label>
-      <input type="range" id="p-bermr" data-param="bermRadius"
-             min="1" max="10" step="1" value="2">
-      <span class="param-val" id="v-bermr">2</span>
-    </div>
-
-    <div class="param-divider"></div>
-    <div class="param-heading">Allocation</div>
-
-    <div class="param-row">
-      <label for="p-budget">Energy budget</label>
-      <input type="range" id="p-budget" data-param="energyBudgetKWh"
-             min="0.5" max="50" step="0.5" value="5">
-      <span class="param-val" id="v-budget">5</span>
-    </div>
-
-    <div class="param-row">
-      <label for="p-numAgents">Agent pairs</label>
-      <input type="range" id="p-numAgents" data-param="numAgents"
-             min="1" max="10" step="1" value="1">
-      <span class="param-val" id="v-numagents">1</span>
-    </div>
-    <div class="param-note" id="fleet-note">
-      2 machines on site &middot; 0.50 kWh to deploy
-    </div>
-
-    <div class="param-row">
-      <label for="p-bermtorque">Motor torque</label>
-      <input type="range" id="p-bermtorque" data-param="maxMotorTorqueNM"
-             min="1" max="20000" step="1" value="210">
-      <span class="param-val" id="v-bermtorque">210</span>
-    </div>
-    <div class="param-note">
-      Too little and a loaded blade stalls. Too much and the tyres spin, which
-      costs charge and moves nothing.
-    </div>
-
-    <div class="param-row">
-      <label for="p-bermmass">Soil mass</label>
-      <input type="range" id="p-bermmass" data-param="soilMass"
-             min="1" max="10" step="1" value="5">
-      <span class="param-val" id="v-bermmass">5</span>
-    </div>
-
-    <div class="param-row">
-      <label for="p-deploy">Deploy cost</label>
-      <input type="range" id="p-deploy" data-param="deployCostKWhPerMachine"
-             min="0" max="2" step="0.05" value="0.25">
-      <span class="param-val" id="v-deploy">0.25</span>
-    </div>
-
-    <div class="param-divider"></div>
-    <div class="param-row" style="justify-content:space-between;">
-      <label style="flex:1 1 auto;">Berm profile</label>
-      <button id="btn-berm-reset" class="mini-btn">Reset</button>
-    </div>
-    <canvas id="berm-chart" class="berm-chart"></canvas>
-    <div class="berm-hint">Drag inside the chart to shape the berm cross section</div>
-  </div>
-
-  <div id="unity-warning"> </div>
-  <div id="unity-footer">
-    <div id="unity-logo-title-footer"></div>
-    <div id="unity-fullscreen-button"></div>
-    <div id="unity-build-title">Erosion</div>
-  </div>
-</div>
-
-<style>
-  /* ============================================================
-     TOKENS
-     Palette is pulled from the berm chart already on this page:
-     its positive bars are teal, its negative bars are burnt clay.
-     The HUD reuses them so the whole interface reads as one thing.
-     ============================================================ */
-  :root {
-    --ink:        #e9e6dc;   /* bone, print on a site drawing */
-    --ink-dim:    rgba(233, 230, 220, 0.55);
-    --ink-faint:  rgba(233, 230, 220, 0.28);
-    --panel:      rgba(6, 9, 8, 0.82);
-    --charge:     #4fd1a5;   /* same teal as the berm chart's positive bars */
-    --warn:       #e0a54b;   /* under a quarter tank */
-    --flat:       #d9614a;   /* same clay as the chart's negative bars */
-    --mono:       ui-monospace, "SFMono-Regular", "Roboto Mono", Menlo, Consolas, monospace;
-  }
-
-  /* ---- existing panel furniture ---- */
-  .param-divider {
-    height: 1px;
-    background: var(--ink-faint);
-    margin: 12px 0;
-  }
-  .param-heading {
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-dim);
-    margin-bottom: 10px;
-  }
-  .param-note {
-    font-size: 11px;
-    line-height: 1.45;
-    color: var(--ink-dim);
-    margin: -2px 0 10px 0;
-  }
-  .mini-btn {
-    padding: 3px 10px;
-    font-size: 12px;
-    font-family: inherit;
-    color: var(--ink);
-    background: rgba(255,255,255,0.15);
-    border: 1px solid var(--ink);
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .mini-btn:hover { background: rgba(255,255,255,0.3); }
-  .berm-chart {
-    display: block;
-    width: 292px;
-    height: 130px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.4);
-    border-radius: 4px;
-    touch-action: none;
-    cursor: crosshair;
-  }
-  .berm-hint {
-    margin-top: 6px;
-    font-size: 11px;
-    opacity: 0.7;
-  }
-  #unity-play-button {
-    display: none;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    padding: 18px 56px;
-    font-size: 24px;
-    font-family: inherit;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.65);
-    border: 2px solid #fff;
-    border-radius: 6px;
-    cursor: pointer;
-    z-index: 10;
-  }
-  #unity-play-button:hover { background: rgba(0, 0, 0, 0.85); }
-
-  #sim-controls {
-    display: none;
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 10;
-  }
-  .sim-btn {
-    display: inline-block;
-    padding: 8px 16px;
-    margin-right: 6px;
-    font-size: 14px;
-    font-family: inherit;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.65);
-    border: 1px solid #fff;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .sim-btn:hover { background: rgba(0, 0, 0, 0.85); }
-  .sim-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-  .sim-btn:focus-visible,
-  .mini-btn:focus-visible,
-  #param-panel input:focus-visible {
-    outline: 2px solid var(--charge);
-    outline-offset: 2px;
-  }
-
-  #param-panel {
-    display: none;
-    position: absolute;
-    top: 52px;
-    left: 10px;
-    z-index: 10;
-    padding: 12px 14px;
-    background: rgba(0, 0, 0, 0.75);
-    border: 1px solid #fff;
-    border-radius: 6px;
-    color: #fff;
-    font-family: inherit;
-    font-size: 13px;
-    width: 320px;
-    max-height: calc(100% - 72px);
-    overflow-y: auto;
-  }
-  .param-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-  .param-row:last-child { margin-bottom: 0; }
-  .param-row label { flex: 0 0 120px; }
-  .param-row input[type="range"] { flex: 1 1 auto; margin: 0 8px; }
-  .param-val {
-    flex: 0 0 48px;
-    text-align: right;
-    font-family: var(--mono);
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* ============================================================
-     WALLET
-     ============================================================ */
-  #wallet {
-    display: none;
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 10;
-    width: 232px;
-    padding: 14px 16px 16px;
-    background: var(--panel);
-    border: 1px solid var(--ink-faint);
-    border-radius: 6px;
-    color: var(--ink);
-    font-family: inherit;
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
-  }
-
-  .wallet-eyebrow {
-    font-size: 10px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink-dim);
-  }
-
-  .wallet-figure {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    margin: 4px 0 12px;
-    font-family: var(--mono);
-    font-variant-numeric: tabular-nums;
-    font-size: 34px;
-    line-height: 1;
-    letter-spacing: -0.02em;
-    color: var(--charge);
-    transition: color 0.3s ease;
-  }
-  .wallet-unit {
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    color: var(--ink-dim);
-  }
-
-  /* the signature element: 40 discrete charge cells */
-  .cells {
-    display: flex;
-    gap: 2px;
-    height: 14px;
-    margin-bottom: 14px;
-  }
-  .cell {
-    flex: 1 1 0;
-    background: rgba(233, 230, 220, 0.10);
-    transition: background-color 0.18s linear;
-  }
-  .cell.lit { background: var(--charge); }
-
-  #wallet.warn  .wallet-figure { color: var(--warn); }
-  #wallet.warn  .cell.lit      { background: var(--warn); }
-  #wallet.flat  .wallet-figure { color: var(--flat); }
-  #wallet.flat  .cell.lit      { background: var(--flat); }
-
-  .wallet-ledger {
-    border-top: 1px solid var(--ink-faint);
-    padding-top: 9px;
-    margin-top: 9px;
-  }
-  .wallet-ledger:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
-
-  .ledger-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 5px;
-  }
-  .ledger-row:last-child { margin-bottom: 0; }
-  .ledger-key {
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-dim);
-  }
-  .ledger-val {
-    font-family: var(--mono);
-    font-variant-numeric: tabular-nums;
-    font-size: 12px;
-  }
-  .ledger-headline .ledger-val {
-    font-size: 15px;
-    color: var(--charge);
-  }
-  #wallet.flat .ledger-headline .ledger-val { color: var(--flat); }
-
-  /* ============================================================
-     FLAT OVERLAY
-     ============================================================ */
-  #flat-overlay {
-    display: none;
-    position: absolute;
-    inset: 0;
-    z-index: 20;
-    background: rgba(4, 6, 6, 0.72);
-    -webkit-backdrop-filter: blur(3px);
-    backdrop-filter: blur(3px);
-    align-items: center;
-    justify-content: center;
-  }
-  #flat-overlay.shown { display: flex; }
-
-  .flat-card {
-    width: 400px;
-    max-width: calc(100% - 40px);
-    padding: 26px 28px 24px;
-    background: var(--panel);
-    border: 1px solid var(--ink-faint);
-    border-radius: 6px;
-    color: var(--ink);
-    font-family: inherit;
-  }
-  .flat-eyebrow {
-    font-size: 11px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--flat);
-    margin-bottom: 10px;
-  }
-  .flat-body {
-    margin: 0 0 20px;
-    font-size: 13px;
-    line-height: 1.55;
-    color: var(--ink-dim);
-  }
-  .flat-stats {
-    display: flex;
-    gap: 8px;
-    padding: 16px 0;
-    border-top: 1px solid var(--ink-faint);
-    border-bottom: 1px solid var(--ink-faint);
-  }
-  .flat-stat {
-    flex: 1 1 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .flat-num {
-    font-family: var(--mono);
-    font-variant-numeric: tabular-nums;
-    font-size: 20px;
-    line-height: 1;
-  }
-  .flat-stat-hero .flat-num {
-    font-size: 26px;
-    color: var(--charge);
-  }
-  .flat-lbl {
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-dim);
-  }
-  .flat-hint {
-    margin: 18px 0 20px;
-    font-size: 12px;
-    line-height: 1.55;
-    color: var(--ink-dim);
-  }
-  .flat-btn { margin: 0; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .cell, .wallet-figure { transition: none; }
-  }
-</style>
-
-<script>
-  var canvas = document.querySelector("#unity-canvas");
-
-  function unityShowBanner(msg, type) {
-    var warningBanner = document.querySelector("#unity-warning");
-    function updateBannerVisibility() {
-      warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-    }
-    var div = document.createElement('div');
-    div.innerHTML = msg;
-    warningBanner.appendChild(div);
-    if (type == 'error') div.style = 'background: red; padding: 10px;';
-    else {
-      if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-      setTimeout(function() {
-        warningBanner.removeChild(div);
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        var warningBanner = document.querySelector("#unity-warning");
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
         updateBannerVisibility();
-      }, 5000);
-    }
-    updateBannerVisibility();
-  }
-
-  var buildUrl = "Build";
-  var loaderUrl = buildUrl + "/Erosion_web.loader.js";
-  var config = {
-    arguments: [],
-    dataUrl: buildUrl + "/Erosion_web.data",
-    frameworkUrl: buildUrl + "/Erosion_web.framework.js",
-    codeUrl: buildUrl + "/Erosion_web.wasm",
-    streamingAssetsUrl: "StreamingAssets",
-    companyName: "DefaultCompany",
-    productName: "Erosion",
-    productVersion: "1.0",
-    showBanner: unityShowBanner,
-  };
-
-  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-    var meta = document.createElement('meta');
-    meta.name = 'viewport';
-    meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-    document.getElementsByTagName('head')[0].appendChild(meta);
-    document.querySelector("#unity-container").className = "unity-mobile";
-    canvas.className = "unity-mobile";
-  } else {
-    canvas.style.width = "960px";
-    canvas.style.height = "600px";
-  }
-
-  document.querySelector("#unity-loading-bar").style.display = "block";
-
-  var unityInstanceRef = null;
-  var playButton  = document.querySelector("#unity-play-button");
-  var simControls = document.querySelector("#sim-controls");
-  var paramPanel  = document.querySelector("#param-panel");
-  var wallet      = document.querySelector("#wallet");
-  var flatOverlay = document.querySelector("#flat-overlay");
-  var resumeBtn   = document.querySelector("#btn-resume");
-
-  function send(method, arg) {
-    if (!unityInstanceRef) return;
-    if (arg === undefined) unityInstanceRef.SendMessage("SimulationController", method);
-    else unityInstanceRef.SendMessage("SimulationController", method, arg);
-  }
-
-  // ---- Play button: first start ----
-  playButton.onclick = () => {
-    if (!unityInstanceRef) return;
-    send("StartSimulation");
-    playButton.remove();
-    simControls.style.display = "block";
-    wallet.style.display = "block";
-  };
-
-  // ---- Run control ----
-  document.querySelector("#btn-pause").onclick  = () => send("StopSimulation");
-  resumeBtn.onclick                             = () => send("StartSimulation");
-  document.querySelector("#btn-erode").onclick  = () => send("RunErosion");
-
-  function resetSite() {
-    send("ResetSimulation");
-    EnergyHUD.clearBurn();
-    flatOverlay.classList.remove("shown");
-  }
-  document.querySelector("#btn-reset").onclick      = resetSite;
-  document.querySelector("#btn-flat-reset").onclick = resetSite;
-
-  // ---- Parameters panel toggle ----
-  document.querySelector("#btn-params").onclick = () => {
-    paramPanel.style.display =
-            (paramPanel.style.display === "block") ? "none" : "block";
-  };
-
-  // ---- Realtime parameter sliders ----
-  // Every slider carries a data-param attribute naming the variable.
-  // On input we send "name=value" to Unity, which applies it immediately.
-  document.querySelectorAll("#param-panel input[type='range']").forEach((slider) => {
-    const valueLabel = slider.parentElement.querySelector(".param-val");
-    slider.addEventListener("input", () => {
-      if (valueLabel) valueLabel.textContent = slider.value;
-      send("SetParameter", slider.dataset.param + "=" + slider.value);
-    });
-  });
-
-  // ---- Load new terrain (.raw) ----
-  document.querySelector("#terrain-file").onchange = (e) => {
-    if (!unityInstanceRef) return;
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const bytes = new Uint8Array(reader.result);
-      let binary = "";
-      const chunk = 0x8000;
-      for (let i = 0; i < bytes.length; i += chunk) {
-        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-      }
-      const base64 = btoa(binary);
-      send("LoadTerrainRaw", base64);
-      EnergyHUD.clearBurn();
-      flatOverlay.classList.remove("shown");
-    };
-    reader.onerror = () => {
-      unityShowBanner("Could not read the selected file.", "error");
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
-  };
-
-  // ============================================================
-  //  ENERGY WALLET
-  //  Unity pushes a JSON blob at 5 Hz through WebBridge.jslib ->
-  //  window.updateEnergyStats. Everything here is display only;
-  //  the ledger itself lives in main.cs.
-  // ============================================================
-  const EnergyHUD = (function () {
-    const CELL_COUNT = 40;
-    const WARN_AT    = 0.25;      // fraction of budget left
-
-    let cells = [];
-    let burnAnchor = null;        // { t, spent } for the burn-rate derivative
-
-    function buildCells() {
-      const host = document.querySelector("#w-cells");
-      host.innerHTML = "";
-      cells = [];
-      for (let i = 0; i < CELL_COUNT; i++) {
-        const d = document.createElement("div");
-        d.className = "cell lit";
-        host.appendChild(d);
-        cells.push(d);
-      }
-    }
-
-    function paintCells(fracLeft) {
-      const lit = Math.round(Math.max(0, Math.min(1, fracLeft)) * CELL_COUNT);
-      for (let i = 0; i < CELL_COUNT; i++) {
-        cells[i].classList.toggle("lit", i < lit);
-      }
-    }
-
-    function clearBurn() {
-      burnAnchor = null;
-      document.querySelector("#w-burn").textContent = "\u2014";
-    }
-
-    // Burn rate is a derivative over wall time, so it is only meaningful while
-    // the sim is actually running. Pausing drops the anchor rather than
-    // averaging a stall into the number.
-    function burnRate(s) {
-      if (!s.running) { burnAnchor = null; return null; }
-
-      const now = performance.now();
-      if (!burnAnchor || s.spent < burnAnchor.spent) {
-        burnAnchor = { t: now, spent: s.spent };
-        return null;
       }
 
-      const dt = (now - burnAnchor.t) / 60000;   // minutes
-      if (dt < 0.05) return null;                // need ~3s before it settles
-
-      const rate = (s.spent - burnAnchor.spent) / dt;
-
-      // slide the anchor so the figure tracks the current fleet, not the whole run
-      if (dt > 0.5) burnAnchor = { t: now, spent: s.spent };
-
-      return rate;
-    }
-
-    function apply(s) {
-      const fracLeft = s.budget > 0 ? s.remaining / s.budget : 0;
-
-      document.querySelector("#w-remaining").textContent = Math.max(0, s.remaining).toFixed(3);
-      document.querySelector("#w-budget").textContent    = s.budget.toFixed(3);
-      document.querySelector("#w-deploy").textContent    = s.deploy.toFixed(3);
-      document.querySelector("#w-operate").textContent   = s.operate.toFixed(3);
-      document.querySelector("#w-soil").textContent      = s.soil.toFixed(2) + " m\u00B3";
-      document.querySelector("#w-score").textContent     = s.score.toFixed(2) + " m\u00B3/kWh";
-
-      paintCells(fracLeft);
-
-      wallet.classList.toggle("flat", !!s.flat);
-      wallet.classList.toggle("warn", !s.flat && fracLeft <= WARN_AT);
-
-      const rate = burnRate(s);
-      const burnEl = document.querySelector("#w-burn");
-      if (s.flat) {
-        burnEl.textContent = "0.000 kWh/min";
-      } else if (rate !== null && rate > 1e-6) {
-        const minsLeft = s.remaining / rate;
-        burnEl.textContent = rate.toFixed(3) + " kWh/min \u00B7 "
-                + minsLeft.toFixed(1) + "m";
-      } else if (rate !== null) {
-        burnEl.textContent = "0.000 kWh/min";
-      }
-
-      resumeBtn.disabled = !!s.flat;
-
-      if (s.flat) {
-        document.querySelector("#f-soil").textContent  = s.soil.toFixed(2);
-        document.querySelector("#f-score").textContent = s.score.toFixed(2);
-        document.querySelector("#f-spent").textContent = s.spent.toFixed(2);
-        flatOverlay.classList.add("shown");
-      } else {
-        flatOverlay.classList.remove("shown");
-      }
-    }
-
-    buildCells();
-    return { apply: apply, clearBurn: clearBurn };
-  })();
-
-  // Unity -> browser callback name must match WebBridge.jslib
-  window.updateEnergyStats = function (json) {
-    let s;
-    try { s = JSON.parse(json); } catch (e) { return; }
-    EnergyHUD.apply(s);
-  };
-
-  // ---- Fleet cost preview, so the purchase is visible before it is made ----
-  (function () {
-    const agentSlider  = document.querySelector("#p-numAgents");
-    const deploySlider = document.querySelector("#p-deploy");
-    const note         = document.querySelector("#fleet-note");
-
-    function refresh() {
-      // Unity spawns one loosening agent AND one berm agent per "pair"
-      const machines = parseInt(agentSlider.value, 10) * 2;
-      const cost     = machines * parseFloat(deploySlider.value);
-      note.textContent = machines + " machines on site \u00B7 "
-              + cost.toFixed(2) + " kWh to deploy";
-    }
-
-    agentSlider.addEventListener("input", refresh);
-    deploySlider.addEventListener("input", refresh);
-    refresh();
-  })();
-
-  // ============================================================
-  //  Berm profile bar chart
-  //  bars = bermRadius*2+1, each bar ranges over +-bermHeightMeters
-  //  Browser -> Unity : SimulationController.SetBermProfile (CSV)
-  //  Unity -> browser : window.updateBermChart (from WebBridge.jslib)
-  // ============================================================
-  const BermChart = (function () {
-    const LW = 292, LH = 130;                 // logical size, matches CSS
-    const PAD_L = 30, PAD_R = 10, PAD_T = 12, PAD_B = 18;
-
-    let canvas, ctx, dpr = 1;
-    let radius = 2;                            // Unity default bermRadius
-    let heightM = 5;                           // Unity default bermHeightMeters
-    let profile = [];
-    let dragging = false;
-    let lastSent = "";
-    let onEdit = null;
-
-    function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
-    function barCount() { return radius * 2 + 1; }
-    function safeH() { return heightM < 0.0001 ? 0.0001 : heightM; }
-
-    function plot() {
-      const left = PAD_L, right = LW - PAD_R, top = PAD_T, bottom = LH - PAD_B;
-      const w = right - left, h = bottom - top;
-      return { left, right, top, bottom, w, h, zeroY: top + h / 2, halfH: h / 2 };
-    }
-    function valueToY(v) { const p = plot(); return p.zeroY - (v / safeH()) * p.halfH; }
-    function yToValue(y) { const p = plot(); return clamp(((p.zeroY - y) / p.halfH) * safeH(), -heightM, heightM); }
-    function xToIndex(x) { const p = plot(); const cw = p.w / barCount(); return clamp(Math.floor((x - p.left) / cw), 0, barCount() - 1); }
-
-    function draw() {
-      if (!ctx) return;
-      ctx.clearRect(0, 0, LW, LH);
-      const p = plot(), n = barCount(), cw = p.w / n;
-
-      ctx.fillStyle = "rgba(255,255,255,0.75)";
-      ctx.font = "10px sans-serif";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "middle";
-      const hLbl = Math.round(heightM * 10) / 10;
-      ctx.fillText("+" + hLbl, p.left - 4, p.top);
-      ctx.fillText("0", p.left - 4, p.zeroY);
-      ctx.fillText("-" + hLbl, p.left - 4, p.bottom);
-
-      ctx.strokeStyle = "rgba(255,255,255,0.15)";
-      ctx.lineWidth = 1;
-      [p.top, p.bottom].forEach(function (yy) {
-        ctx.beginPath(); ctx.moveTo(p.left, yy); ctx.lineTo(p.right, yy); ctx.stroke();
-      });
-      ctx.strokeStyle = "rgba(255,255,255,0.5)";
-      ctx.beginPath(); ctx.moveTo(p.left, p.zeroY); ctx.lineTo(p.right, p.zeroY); ctx.stroke();
-
-      for (let i = 0; i < n; i++) {
-        const v = profile[i] || 0;
-        const x = p.left + i * cw + cw * 0.15;
-        const bw = cw * 0.7;
-        const yv = valueToY(v);
-        const yTop = Math.min(yv, p.zeroY);
-        const bh = Math.abs(yv - p.zeroY);
-        ctx.fillStyle = v >= 0 ? "rgba(79,209,165,0.9)" : "rgba(217,97,74,0.9)";
-        ctx.fillRect(x, yTop, bw, Math.max(bh, 0.5));
-      }
-    }
-
-    function emit() {
-      const csv = profile.map(function (v) { return Math.round(v * 1000) / 1000; }).join(",");
-      if (csv === lastSent) return;
-      lastSent = csv;
-      if (typeof onEdit === "function") onEdit(csv);
-    }
-
-    function setAt(x, y) { profile[xToIndex(x)] = yToValue(y); draw(); emit(); }
-
-    function pointerXY(e) {
-      const r = canvas.getBoundingClientRect();
-      return { x: (e.clientX - r.left) * (LW / r.width), y: (e.clientY - r.top) * (LH / r.height) };
-    }
-
-    function init(el, editCb) {
-      canvas = el;
-      onEdit = editCb;
-      dpr = window.devicePixelRatio || 1;
-      canvas.width = LW * dpr;
-      canvas.height = LH * dpr;
-      ctx = canvas.getContext("2d");
-      ctx.scale(dpr, dpr);
-      if (profile.length !== barCount()) profile = new Array(barCount()).fill(0);
-
-      canvas.addEventListener("pointerdown", function (e) {
-        dragging = true; canvas.setPointerCapture(e.pointerId);
-        const q = pointerXY(e); setAt(q.x, q.y);
-      });
-      canvas.addEventListener("pointermove", function (e) {
-        if (!dragging) return;
-        const q = pointerXY(e); setAt(q.x, q.y);
-      });
-      canvas.addEventListener("pointerup", function () { dragging = false; });
-      canvas.addEventListener("pointercancel", function () { dragging = false; });
-      draw();
-    }
-
-    return {
-      init: init,
-      setRadius: function (r) {                 // visual mirror of InitializeBermProfile
-        r = Math.max(1, Math.round(r));
-        if (r === radius) return;
-        radius = r;
-        profile = new Array(barCount()).fill(0);
-        lastSent = "";
-        draw();
-      },
-      setHeight: function (hm) {                 // rescale axis, re-clamp, push clamped values
-        heightM = hm;
-        for (let i = 0; i < profile.length; i++) profile[i] = clamp(profile[i], -heightM, heightM);
-        draw();
-        emit();
-      },
-      setProfileFromCSV: function (csv) {        // pushed from Unity, do not echo
-        if (dragging) return;
-        const parts = csv.split(",").map(parseFloat).filter(function (v) { return !isNaN(v); });
-        if (!parts.length) return;
-        profile = parts.map(function (v) { return clamp(v, -heightM, heightM); });
-        const impliedR = (profile.length - 1) / 2;
-        if (Number.isInteger(impliedR) && impliedR >= 1) radius = impliedR;
-        lastSent = profile.map(function (v) { return Math.round(v * 1000) / 1000; }).join(",");
-        draw();
-      },
-      reset: function () { profile = new Array(barCount()).fill(0); draw(); emit(); }
-    };
-  })();
-
-  function sendBermProfile(csv) { send("SetBermProfile", csv); }
-
-  // Unity -> browser callback name must match WebBridge.jslib
-  window.updateBermChart = function (csv) { BermChart.setProfileFromCSV(csv); };
-
-  BermChart.init(document.querySelector("#berm-chart"), sendBermProfile);
-  document.querySelector("#btn-berm-reset").onclick = function () { BermChart.reset(); };
-
-  (function () {
-    const rSlider = document.querySelector("#p-bermr");
-    const hSlider = document.querySelector("#p-bermh");
-    if (rSlider) rSlider.addEventListener("input", function () { BermChart.setRadius(parseFloat(rSlider.value)); });
-    if (hSlider) hSlider.addEventListener("input", function () { BermChart.setHeight(parseFloat(hSlider.value)); });
-  })();
-
-  // ---- Load Unity ----
-  var script = document.createElement("script");
-  script.src = loaderUrl;
-  script.onload = () => {
-    createUnityInstance(canvas, config, (progress) => {
-      document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-    }).then((unityInstance) => {
-      unityInstanceRef = unityInstance;
-      document.querySelector("#unity-loading-bar").style.display = "none";
-      playButton.style.display = "block";
-      document.querySelector("#unity-fullscreen-button").onclick = () => {
-        unityInstance.SetFullscreen(1);
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/Erosion_web.loader.js";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/Erosion_web.data",
+        frameworkUrl: buildUrl + "/Erosion_web.framework.js",
+        codeUrl: buildUrl + "/Erosion_web.wasm",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "Erosion",
+        productVersion: "1.0",
+        showBanner: unityShowBanner,
+        // errorHandler: function(err, url, line) {
+        //    alert("error " + err + " occurred at line " + line);
+        //    // Return 'true' if you handled this error and don't want Unity
+        //    // to process it further, 'false' otherwise.
+        //    return true;
+        // },
       };
-    }).catch((message) => {
-      alert(message);
-    });
-  };
 
-  document.body.appendChild(script);
+      // By default, Unity keeps WebGL canvas render target size matched with
+      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+      // Set this to false if you want to decouple this synchronization from
+      // happening inside the engine, and you would instead like to size up
+      // the canvas DOM size and WebGL render target sizes yourself.
+      // config.matchWebGLToCanvasSize = false;
 
-</script>
-</body>
+      // If you would like all file writes inside Unity Application.persistentDataPath
+      // directory to automatically persist so that the contents are remembered when
+      // the user revisits the site the next time, uncomment the following line:
+      // config.autoSyncPersistentDataPath = true;
+      // This autosyncing is currently not the default behavior to avoid regressing
+      // existing user projects that might rely on the earlier manual
+      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
+      // expected to change.
+
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
+
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        document.querySelector("#unity-container").className = "unity-mobile";
+        canvas.className = "unity-mobile";
+
+        // To lower canvas resolution on mobile devices to gain some
+        // performance, uncomment the following line:
+        // config.devicePixelRatio = 1;
+
+
+      } else {
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+        canvas.style.width = "960px";
+        canvas.style.height = "600px";
+      }
+
+      document.querySelector("#unity-loading-bar").style.display = "block";
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+              }).then((unityInstance) => {
+                document.querySelector("#unity-loading-bar").style.display = "none";
+                document.querySelector("#unity-fullscreen-button").onclick = () => {
+                  unityInstance.SetFullscreen(1);
+                };
+
+              }).catch((message) => {
+                alert(message);
+              });
+            };
+
+      document.body.appendChild(script);
+
+    </script>
+  </body>
 </html>
