@@ -84,7 +84,7 @@
       <div class="flat-eyebrow">Out of charge</div>
       <p class="flat-body">
         The fleet has drawn its whole allocation. Nothing moves until you reset
-        the site, raise the budget, or switch on unlimited charge.
+        the site or raise the budget.
       </p>
       <div class="flat-stats">
         <div class="flat-stat">
@@ -135,15 +135,6 @@
       <span class="param-val" id="v-budget">50</span>
     </div>
     <div class="param-row">
-      <label for="p-unlimited">Unlimited charge</label>
-      <input type="checkbox" id="p-unlimited">
-      <span class="param-val" id="v-unlimited">off</span>
-    </div>
-    <div class="param-note">
-      Leave-it-running mode. The meter keeps counting so yield stays honest;
-      the wallet just can never stop the site.
-    </div>
-    <div class="param-row">
       <label for="p-deploy">Mobilise cost</label>
       <input type="range" id="p-deploy" data-param="deployCostKWhPerMachine"
              min="0" max="2" step="0.05" value="0.25">
@@ -153,6 +144,15 @@
     <div class="param-divider"></div>
     <div class="param-heading">Drivetrain</div>
 
+    <!-- Default matches what CalibrateDrivetrain() produces for an 18 t
+         machine on a 0.35 m wheel. The old default of 210 Nm was below
+         rolling resistance: one nudge of this slider parked the machine. -->
+    <div class="param-row">
+      <label for="p-torque">Motor torque (Nm)</label>
+      <input type="range" id="p-torque" data-param="maxMotorTorqueNM"
+             min="1000" max="40000" step="100" value="12400">
+      <span class="param-val" id="v-torque">12400</span>
+    </div>
     <div class="param-row">
       <label for="p-power">Rated power (kW)</label>
       <input type="range" id="p-power" data-param="motorRatedPowerKW"
@@ -160,8 +160,9 @@
       <span class="param-val" id="v-power">150</span>
     </div>
     <div class="param-note">
-      Torque is derived from weight and grip, not set: past traction the
-      wheels spin and bill you.
+      Torque is capped by rated power above base speed, so more torque only
+      buys pull at low speed. Past traction it spins the wheels and bills you.
+      Reset re-derives torque from the machine weight.
     </div>
     <div class="param-row">
       <label for="p-rolling">Rolling resistance</label>
@@ -212,20 +213,14 @@
     <div class="param-heading">Dozer and soil</div>
 
     <div class="param-row">
-      <label for="p-plowdepth">Cut depth (m)</label>
-      <input type="range" id="p-plowdepth" data-param="plowDepthM"
-             min="0.05" max="0.5" step="0.01" value="0.2">
-      <span class="param-val" id="v-plowdepth">0.2</span>
-    </div>
-    <div class="param-note">
-      How deep the blade cuts below the surface. All of it goes into the wave
-      ahead of the machine; the wave is what gets left as the berm.
-    </div>
-    <div class="param-row">
       <label for="p-bladeh">Blade height (m)</label>
       <input type="range" id="p-bladeh" data-param="bladeHeightM"
              min="0.4" max="3" step="0.1" value="1.2">
       <span class="param-val" id="v-bladeh">1.2</span>
+    </div>
+    <div class="param-note">
+      Caps the crest of the bow wave. Spoil above the top of the blade rolls
+      over it, so a taller blade pushes a taller, shorter pile.
     </div>
     <div class="param-row">
       <label for="p-cutres">Cut resistance (kPa)</label>
@@ -233,21 +228,19 @@
              min="0" max="150000" step="1000" value="40000">
       <span class="param-val" id="v-cutres">40000</span>
     </div>
+    <!-- Was "Virgin bite" driving the deprecated virginCutFraction. The bite
+         now falls out of the force balance; what the player controls is the
+         commanded set depth, which the solve clamps to. -->
     <div class="param-row">
-      <label for="p-workspeed">Work speed (m/s)</label>
-      <input type="range" id="p-workspeed" data-param="maxWorkSpeedMS"
-             min="0.3" max="2" step="0.05" value="0.7">
-      <span class="param-val" id="v-workspeed">0.7</span>
-    </div>
-    <div class="param-row">
-      <label for="p-bladeload">Blade load share</label>
-      <input type="range" id="p-bladeload" data-param="bladeLoadShare"
-             min="0" max="0.9" step="0.05" value="0.6">
-      <span class="param-val" id="v-bladeload">0.6</span>
+      <label for="p-plowdepth">Set depth (m)</label>
+      <input type="range" id="p-plowdepth" data-param="plowDepthM"
+             min="0.05" max="0.5" step="0.01" value="0.3">
+      <span class="param-val" id="v-plowdepth">0.3</span>
     </div>
     <div class="param-note">
-      How much of the drawbar pull the blade load may take. It slows the
-      machine and bills the wallet; it never stops it. 0 makes plowing free.
+      The deepest furrow the blade may take. The machine cuts shallower than
+      this whenever cut force plus the wave it will be carrying by the end of
+      the pass would exceed its drawbar pull.
     </div>
     <div class="param-row">
       <label for="p-density">Soil density</label>
@@ -379,10 +372,6 @@
   .param-row { display: flex; align-items: center; margin-bottom: 8px; }
   .param-row label { flex: 0 0 118px; }
   .param-row input[type="range"] { flex: 1 1 auto; margin: 0 8px; min-width: 0; }
-  .param-row input[type="checkbox"] {
-    flex: 0 0 auto; margin: 0 8px; width: 16px; height: 16px;
-    accent-color: var(--charge); cursor: pointer;
-  }
   .param-val {
     flex: 0 0 52px; text-align: right;
     font-family: var(--mono); font-variant-numeric: tabular-nums;
@@ -527,13 +516,12 @@
   document.querySelector("#unity-loading-bar").style.display = "block";
 
   var unityInstanceRef = null;
-  var playButton   = document.querySelector("#unity-play-button");
-  var simControls  = document.querySelector("#sim-controls");
-  var paramPanel   = document.querySelector("#param-panel");
-  var wallet       = document.querySelector("#wallet");
-  var flatOverlay  = document.querySelector("#flat-overlay");
-  var resumeBtn    = document.querySelector("#btn-resume");
-  var unlimitedBox = document.querySelector("#p-unlimited");
+  var playButton  = document.querySelector("#unity-play-button");
+  var simControls = document.querySelector("#sim-controls");
+  var paramPanel  = document.querySelector("#param-panel");
+  var wallet      = document.querySelector("#wallet");
+  var flatOverlay = document.querySelector("#flat-overlay");
+  var resumeBtn   = document.querySelector("#btn-resume");
 
   function send(method, arg) {
     if (!unityInstanceRef) return;
@@ -575,23 +563,6 @@
       send("SetParameter", slider.dataset.param + "=" + slider.value);
     });
   });
-
-  // Unlimited charge: the one non-slider parameter.
-  unlimitedBox.addEventListener("change", () => {
-    document.querySelector("#v-unlimited").textContent = unlimitedBox.checked ? "on" : "off";
-    send("SetParameter", "unlimitedBudget=" + (unlimitedBox.checked ? 1 : 0));
-    if (unlimitedBox.checked) flatOverlay.classList.remove("shown");
-  });
-
-  // Push every control's value to Unity once, at load. Without this the C#
-  // defaults are whatever was compiled in, and a slider that reads 50 while
-  // the wallet is really 5 is exactly how a run dies two minutes in.
-  function syncParams() {
-    document.querySelectorAll("#param-panel input[type='range']").forEach((slider) => {
-      send("SetParameter", slider.dataset.param + "=" + slider.value);
-    });
-    send("SetParameter", "unlimitedBudget=" + (unlimitedBox.checked ? 1 : 0));
-  }
 
   document.querySelector("#terrain-file").onchange = (e) => {
     if (!unityInstanceRef) return;
@@ -668,30 +639,27 @@
     }
 
     function apply(s) {
-      const unlimited = !!s.unlimited;
-      const fracLeft  = s.budget > 0 ? s.remaining / s.budget : 0;
+      const fracLeft = s.budget > 0 ? s.remaining / s.budget : 0;
 
-      document.querySelector("#w-remaining").textContent =
-              unlimited ? "\u221E" : Math.max(0, s.remaining).toFixed(3);
-      document.querySelector("#w-budget").textContent =
-              unlimited ? "\u221E" : s.budget.toFixed(3);
-      document.querySelector("#w-deploy").textContent  = s.deploy.toFixed(3);
-      document.querySelector("#w-operate").textContent = s.operate.toFixed(3);
-      document.querySelector("#w-ripped").textContent  = Math.round(s.ripped) + " m\u00B2";
-      document.querySelector("#w-soil").textContent    = s.soil.toFixed(2) + " m\u00B3";
-      document.querySelector("#w-score").textContent   = s.score.toFixed(2) + " m\u00B3/kWh";
+      document.querySelector("#w-remaining").textContent = Math.max(0, s.remaining).toFixed(3);
+      document.querySelector("#w-budget").textContent    = s.budget.toFixed(3);
+      document.querySelector("#w-deploy").textContent    = s.deploy.toFixed(3);
+      document.querySelector("#w-operate").textContent   = s.operate.toFixed(3);
+      document.querySelector("#w-ripped").textContent    = Math.round(s.ripped) + " m\u00B2";
+      document.querySelector("#w-soil").textContent      = s.soil.toFixed(2) + " m\u00B3";
+      document.querySelector("#w-score").textContent     = s.score.toFixed(2) + " m\u00B3/kWh";
 
-      paintCells(unlimited ? 1 : fracLeft);
+      paintCells(fracLeft);
       wallet.classList.toggle("flat", !!s.flat);
-      wallet.classList.toggle("warn", !unlimited && !s.flat && fracLeft <= WARN_AT);
+      wallet.classList.toggle("warn", !s.flat && fracLeft <= WARN_AT);
 
       const rate = burnRate(s);
       const burnEl = document.querySelector("#w-burn");
       if (s.flat) {
         burnEl.textContent = "0.000 kWh/min";
       } else if (rate !== null && rate > 1e-6) {
-        burnEl.textContent = rate.toFixed(3) + " kWh/min"
-                + (unlimited ? "" : " \u00B7 " + (s.remaining / rate).toFixed(1) + "m");
+        burnEl.textContent = rate.toFixed(3) + " kWh/min \u00B7 "
+                + (s.remaining / rate).toFixed(1) + "m";
       } else if (rate !== null) {
         burnEl.textContent = "0.000 kWh/min";
       }
@@ -885,7 +853,6 @@
       document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
     }).then((unityInstance) => {
       unityInstanceRef = unityInstance;
-      syncParams();
       document.querySelector("#unity-loading-bar").style.display = "none";
       playButton.style.display = "block";
       document.querySelector("#unity-fullscreen-button").onclick = () => {
