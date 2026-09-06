@@ -236,6 +236,33 @@
       ahead of the machine; the wave is what gets left as the berm.
     </div>
     <div class="param-row">
+      <label for="p-passes">Passes per fan</label>
+      <input type="range" id="p-passes" data-param="passesPerFan"
+             min="2" max="21" step="1" value="7">
+      <span class="param-val" id="v-passes">7</span>
+    </div>
+    <div class="param-row">
+      <label for="p-sweep">Sweep angle</label>
+      <input type="range" id="p-sweep" data-param="sweepAngleTotal"
+             min="20" max="300" step="5" value="120">
+      <span class="param-val" id="v-sweep">120</span>
+    </div>
+    <div class="param-note">
+      The crescent is this many straight passes fanned across this angle, each
+      leaving its own wave standing on the arc.
+    </div>
+    <div class="param-row">
+      <label for="p-cutfloor">Borrow depth (m)</label>
+      <input type="range" id="p-cutfloor" data-param="fanCutFloorM"
+             min="0.05" max="4" step="0.05" value="1">
+      <span class="param-val" id="v-cutfloor">1</span>
+    </div>
+    <div class="param-note">
+      How deep one crescent may excavate its borrow area. The passes share a
+      pivot, so this is what leaves material for the later ones; set it near
+      cut depth and only the first pass carries anything.
+    </div>
+    <div class="param-row">
       <label for="p-bladeh">Blade height (m)</label>
       <input type="range" id="p-bladeh" data-param="bladeHeightM"
              min="0.4" max="3" step="0.1" value="1.2">
