@@ -203,24 +203,20 @@
     <div class="param-heading">Dozer and soil</div>
 
     <div class="param-row">
-      <label for="p-bladew">Blade width (m)</label>
-      <input type="range" id="p-bladew" data-param="bladeWidthM"
-             min="2" max="10" step="0.1" value="6.4">
-      <span class="param-val" id="v-bladew">6.4</span>
+      <label for="p-plowdepth">Cut depth (m)</label>
+      <input type="range" id="p-plowdepth" data-param="plowDepthM"
+             min="0.05" max="0.5" step="0.01" value="0.2">
+      <span class="param-val" id="v-plowdepth">0.2</span>
     </div>
     <div class="param-note">
-      Width of the cut and of the berm. Takes effect on the next Reset, since
-      the blade is built into the machine when it is spawned.
+      How deep the blade cuts below the surface. All of it goes into the wave
+      ahead of the machine; the wave is what gets left as the berm.
     </div>
     <div class="param-row">
       <label for="p-bladeh">Blade height (m)</label>
       <input type="range" id="p-bladeh" data-param="bladeHeightM"
              min="0.4" max="3" step="0.1" value="1.2">
       <span class="param-val" id="v-bladeh">1.2</span>
-    </div>
-    <div class="param-note">
-      Caps the crest of the bow wave. Spoil above the top of the blade rolls
-      over it, so a taller blade pushes a taller, shorter pile.
     </div>
     <div class="param-row">
       <label for="p-cutres">Cut resistance (kPa)</label>
@@ -229,46 +225,20 @@
       <span class="param-val" id="v-cutres">40000</span>
     </div>
     <div class="param-row">
-      <label for="p-plowdepth">Set depth (m)</label>
-      <input type="range" id="p-plowdepth" data-param="plowDepthM"
-             min="0.05" max="0.5" step="0.01" value="0.2">
-      <span class="param-val" id="v-plowdepth">0.2</span>
-    </div>
-    <div class="param-note">
-      The furrow the blade takes, held for the whole pass. The machine only
-      sets it shallower if the cut alone would exceed its share of the
-      drawbar pull. What the blade cannot carry spills beside the slot.
-    </div>
-    <div class="param-row">
       <label for="p-workspeed">Work speed (m/s)</label>
       <input type="range" id="p-workspeed" data-param="maxWorkSpeedMS"
              min="0.3" max="2" step="0.05" value="0.7">
       <span class="param-val" id="v-workspeed">0.7</span>
     </div>
-    <div class="param-note">
-      Slower is stronger: below about 0.85 m/s the pull is traction-limited
-      and the blade gets the whole 141 kN; faster, the engine runs out first.
-    </div>
     <div class="param-row">
-      <label for="p-spillon">Spill when full</label>
-      <input type="range" id="p-spillon" data-param="spillWhenFull"
-             min="0" max="1" step="1" value="0">
-      <span class="param-val" id="v-spillon">0</span>
+      <label for="p-bladeload">Blade load share</label>
+      <input type="range" id="p-bladeload" data-param="bladeLoadShare"
+             min="0" max="0.9" step="0.05" value="0.6">
+      <span class="param-val" id="v-bladeload">0.6</span>
     </div>
     <div class="param-note">
-      0: the berm is the whole cut, and a machine that cannot push its wave
-      stalls where it is. 1: a full blade sheds the excess beside the slot.
-    </div>
-    <div class="param-row">
-      <label for="p-spill">Side-cast (% of berm)</label>
-      <input type="range" id="p-spill" data-param="spillRidgePct"
-             min="2" max="100" step="1" value="10">
-      <span class="param-val" id="v-spill">10</span>
-    </div>
-    <div class="param-note">
-      Tallest the ridges beside the slot may stand, as a percentage of the
-      berm's own height. Spoil the blade cannot carry is raked outward under
-      this cap, so a lower value makes the side-cast wider, not taller.
+      How much of the drawbar pull the blade load may take. It slows the
+      machine and bills the wallet; it never stops it. 0 makes plowing free.
     </div>
     <div class="param-row">
       <label for="p-density">Soil density</label>
