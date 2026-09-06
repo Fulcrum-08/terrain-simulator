@@ -84,7 +84,7 @@
       <div class="flat-eyebrow">Out of charge</div>
       <p class="flat-body">
         The fleet has drawn its whole allocation. Nothing moves until you reset
-        the site or raise the budget.
+        the site, raise the budget, or switch on unlimited charge.
       </p>
       <div class="flat-stats">
         <div class="flat-stat">
@@ -133,6 +133,15 @@
       <input type="range" id="p-budget" data-param="energyBudgetKWh"
              min="0.5" max="200" step="0.5" value="50">
       <span class="param-val" id="v-budget">50</span>
+    </div>
+    <div class="param-row">
+      <label for="p-unlimited">Unlimited charge</label>
+      <input type="checkbox" id="p-unlimited">
+      <span class="param-val" id="v-unlimited">off</span>
+    </div>
+    <div class="param-note">
+      Leave-it-running mode. The meter keeps counting so yield stays honest;
+      the wallet just can never stop the site.
     </div>
     <div class="param-row">
       <label for="p-deploy">Mobilise cost</label>
@@ -370,6 +379,10 @@
   .param-row { display: flex; align-items: center; margin-bottom: 8px; }
   .param-row label { flex: 0 0 118px; }
   .param-row input[type="range"] { flex: 1 1 auto; margin: 0 8px; min-width: 0; }
+  .param-row input[type="checkbox"] {
+    flex: 0 0 auto; margin: 0 8px; width: 16px; height: 16px;
+    accent-color: var(--charge); cursor: pointer;
+  }
   .param-val {
     flex: 0 0 52px; text-align: right;
     font-family: var(--mono); font-variant-numeric: tabular-nums;
@@ -514,12 +527,13 @@
   document.querySelector("#unity-loading-bar").style.display = "block";
 
   var unityInstanceRef = null;
-  var playButton  = document.querySelector("#unity-play-button");
-  var simControls = document.querySelector("#sim-controls");
-  var paramPanel  = document.querySelector("#param-panel");
-  var wallet      = document.querySelector("#wallet");
-  var flatOverlay = document.querySelector("#flat-overlay");
-  var resumeBtn   = document.querySelector("#btn-resume");
+  var playButton   = document.querySelector("#unity-play-button");
+  var simControls  = document.querySelector("#sim-controls");
+  var paramPanel   = document.querySelector("#param-panel");
+  var wallet       = document.querySelector("#wallet");
+  var flatOverlay  = document.querySelector("#flat-overlay");
+  var resumeBtn    = document.querySelector("#btn-resume");
+  var unlimitedBox = document.querySelector("#p-unlimited");
 
   function send(method, arg) {
     if (!unityInstanceRef) return;
@@ -561,6 +575,23 @@
       send("SetParameter", slider.dataset.param + "=" + slider.value);
     });
   });
+
+  // Unlimited charge: the one non-slider parameter.
+  unlimitedBox.addEventListener("change", () => {
+    document.querySelector("#v-unlimited").textContent = unlimitedBox.checked ? "on" : "off";
+    send("SetParameter", "unlimitedBudget=" + (unlimitedBox.checked ? 1 : 0));
+    if (unlimitedBox.checked) flatOverlay.classList.remove("shown");
+  });
+
+  // Push every control's value to Unity once, at load. Without this the C#
+  // defaults are whatever was compiled in, and a slider that reads 50 while
+  // the wallet is really 5 is exactly how a run dies two minutes in.
+  function syncParams() {
+    document.querySelectorAll("#param-panel input[type='range']").forEach((slider) => {
+      send("SetParameter", slider.dataset.param + "=" + slider.value);
+    });
+    send("SetParameter", "unlimitedBudget=" + (unlimitedBox.checked ? 1 : 0));
+  }
 
   document.querySelector("#terrain-file").onchange = (e) => {
     if (!unityInstanceRef) return;
@@ -637,27 +668,30 @@
     }
 
     function apply(s) {
-      const fracLeft = s.budget > 0 ? s.remaining / s.budget : 0;
+      const unlimited = !!s.unlimited;
+      const fracLeft  = s.budget > 0 ? s.remaining / s.budget : 0;
 
-      document.querySelector("#w-remaining").textContent = Math.max(0, s.remaining).toFixed(3);
-      document.querySelector("#w-budget").textContent    = s.budget.toFixed(3);
-      document.querySelector("#w-deploy").textContent    = s.deploy.toFixed(3);
-      document.querySelector("#w-operate").textContent   = s.operate.toFixed(3);
-      document.querySelector("#w-ripped").textContent    = Math.round(s.ripped) + " m\u00B2";
-      document.querySelector("#w-soil").textContent      = s.soil.toFixed(2) + " m\u00B3";
-      document.querySelector("#w-score").textContent     = s.score.toFixed(2) + " m\u00B3/kWh";
+      document.querySelector("#w-remaining").textContent =
+              unlimited ? "\u221E" : Math.max(0, s.remaining).toFixed(3);
+      document.querySelector("#w-budget").textContent =
+              unlimited ? "\u221E" : s.budget.toFixed(3);
+      document.querySelector("#w-deploy").textContent  = s.deploy.toFixed(3);
+      document.querySelector("#w-operate").textContent = s.operate.toFixed(3);
+      document.querySelector("#w-ripped").textContent  = Math.round(s.ripped) + " m\u00B2";
+      document.querySelector("#w-soil").textContent    = s.soil.toFixed(2) + " m\u00B3";
+      document.querySelector("#w-score").textContent   = s.score.toFixed(2) + " m\u00B3/kWh";
 
-      paintCells(fracLeft);
+      paintCells(unlimited ? 1 : fracLeft);
       wallet.classList.toggle("flat", !!s.flat);
-      wallet.classList.toggle("warn", !s.flat && fracLeft <= WARN_AT);
+      wallet.classList.toggle("warn", !unlimited && !s.flat && fracLeft <= WARN_AT);
 
       const rate = burnRate(s);
       const burnEl = document.querySelector("#w-burn");
       if (s.flat) {
         burnEl.textContent = "0.000 kWh/min";
       } else if (rate !== null && rate > 1e-6) {
-        burnEl.textContent = rate.toFixed(3) + " kWh/min \u00B7 "
-                + (s.remaining / rate).toFixed(1) + "m";
+        burnEl.textContent = rate.toFixed(3) + " kWh/min"
+                + (unlimited ? "" : " \u00B7 " + (s.remaining / rate).toFixed(1) + "m");
       } else if (rate !== null) {
         burnEl.textContent = "0.000 kWh/min";
       }
@@ -851,6 +885,7 @@
       document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
     }).then((unityInstance) => {
       unityInstanceRef = unityInstance;
+      syncParams();
       document.querySelector("#unity-loading-bar").style.display = "none";
       playButton.style.display = "block";
       document.querySelector("#unity-fullscreen-button").onclick = () => {
