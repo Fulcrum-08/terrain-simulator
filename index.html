@@ -234,13 +234,23 @@
     <div class="param-row">
       <label for="p-plowdepth">Set depth (m)</label>
       <input type="range" id="p-plowdepth" data-param="plowDepthM"
-             min="0.05" max="0.5" step="0.01" value="0.3">
-      <span class="param-val" id="v-plowdepth">0.3</span>
+             min="0.05" max="0.5" step="0.01" value="0.2">
+      <span class="param-val" id="v-plowdepth">0.2</span>
     </div>
     <div class="param-note">
-      The deepest furrow the blade may take. The machine cuts shallower than
-      this whenever cut force plus the wave it will be carrying by the end of
-      the pass would exceed its drawbar pull.
+      The furrow the blade takes, held for the whole pass. The machine only
+      sets it shallower if the cut alone would exceed its share of the
+      drawbar pull. What the blade cannot carry spills beside the slot.
+    </div>
+    <div class="param-row">
+      <label for="p-workspeed">Work speed (m/s)</label>
+      <input type="range" id="p-workspeed" data-param="maxWorkSpeedMS"
+             min="0.3" max="2" step="0.05" value="0.7">
+      <span class="param-val" id="v-workspeed">0.7</span>
+    </div>
+    <div class="param-note">
+      Slower is stronger: below about 0.85 m/s the pull is traction-limited
+      and the blade gets the whole 141 kN; faster, the engine runs out first.
     </div>
     <div class="param-row">
       <label for="p-density">Soil density</label>
