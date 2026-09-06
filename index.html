@@ -144,25 +144,27 @@
     <div class="param-divider"></div>
     <div class="param-heading">Drivetrain</div>
 
-    <!-- Default matches what CalibrateDrivetrain() produces for an 18 t
-         machine on a 0.35 m wheel. The old default of 210 Nm was below
-         rolling resistance: one nudge of this slider parked the machine. -->
     <div class="param-row">
-      <label for="p-torque">Motor torque (Nm)</label>
-      <input type="range" id="p-torque" data-param="maxMotorTorqueNM"
-             min="1000" max="40000" step="100" value="12400">
-      <span class="param-val" id="v-torque">12400</span>
+      <label for="p-class">Machine class</label>
+      <select id="p-class" data-param="machineClass">
+        <option value="6">D6 &middot; 18 t &middot; 150 kW &middot; 4.0 m blade</option>
+        <option value="9">D9 &middot; 49 t &middot; 306 kW &middot; 4.3 m blade</option>
+        <option value="11" selected>D11 &middot; 104 t &middot; 634 kW &middot; 6.4 m blade</option>
+      </select>
+    </div>
+    <div class="param-note">
+      Takes effect on Reset. A D6 fills its blade four metres into a slot and
+      spills the rest; a D11 carries the whole slot to the end of the pass.
     </div>
     <div class="param-row">
       <label for="p-power">Rated power (kW)</label>
       <input type="range" id="p-power" data-param="motorRatedPowerKW"
-             min="10" max="500" step="5" value="150">
-      <span class="param-val" id="v-power">150</span>
+             min="10" max="1000" step="5" value="634">
+      <span class="param-val" id="v-power">634</span>
     </div>
     <div class="param-note">
-      Torque is capped by rated power above base speed, so more torque only
-      buys pull at low speed. Past traction it spins the wheels and bills you.
-      Reset re-derives torque from the machine weight.
+      Overrides the class preset until the next Reset. Torque is derived from
+      weight and grip, not set: past traction the wheels spin and bill you.
     </div>
     <div class="param-row">
       <label for="p-rolling">Rolling resistance</label>
@@ -211,13 +213,6 @@
 
     <div class="param-divider"></div>
     <div class="param-heading">Dozer and soil</div>
-    <div class="param-row">
-  <label for="p-bladew">Blade width (m)</label>
-  <input type="range" id="p-bladew" data-param="bladeWidthM"
-         min="2" max="10" step="0.1" value="6.4">
-  <span class="param-val" id="v-bladew">6.4</span>
-</div>
-<div class="param-note">Takes effect on Reset.</div>
 
     <div class="param-row">
       <label for="p-bladeh">Blade height (m)</label>
@@ -258,6 +253,17 @@
     <div class="param-note">
       Slower is stronger: below about 0.85 m/s the pull is traction-limited
       and the blade gets the whole 141 kN; faster, the engine runs out first.
+    </div>
+    <div class="param-row">
+      <label for="p-spill">Side-cast height</label>
+      <input type="range" id="p-spill" data-param="spillRidgeFrac"
+             min="0.02" max="1" step="0.01" value="0.1">
+      <span class="param-val" id="v-spill">0.1</span>
+    </div>
+    <div class="param-note">
+      Ridge cap beside the slot, as a fraction of blade height. Spoil the blade
+      cannot carry is raked outward under this cap, so a lower value makes the
+      side-cast wider, not taller.
     </div>
     <div class="param-row">
       <label for="p-density">Soil density</label>
@@ -389,6 +395,11 @@
   .param-row { display: flex; align-items: center; margin-bottom: 8px; }
   .param-row label { flex: 0 0 118px; }
   .param-row input[type="range"] { flex: 1 1 auto; margin: 0 8px; min-width: 0; }
+  .param-row select {
+    flex: 1 1 auto; margin: 0 8px; min-width: 0; padding: 3px 4px;
+    font-family: inherit; font-size: 12px; color: var(--ink);
+    background: rgba(0,0,0,0.6); border: 1px solid var(--ink-faint); border-radius: 4px;
+  }
   .param-val {
     flex: 0 0 52px; text-align: right;
     font-family: var(--mono); font-variant-numeric: tabular-nums;
@@ -579,6 +590,10 @@
       if (valueLabel) valueLabel.textContent = slider.value;
       send("SetParameter", slider.dataset.param + "=" + slider.value);
     });
+  });
+
+  document.querySelector("#p-class").addEventListener("change", (e) => {
+    send("SetParameter", "machineClass=" + e.target.value);
   });
 
   document.querySelector("#terrain-file").onchange = (e) => {
