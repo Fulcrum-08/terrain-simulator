@@ -147,8 +147,8 @@
     <div class="param-row">
       <label for="p-power">Rated power (kW)</label>
       <input type="range" id="p-power" data-param="motorRatedPowerKW"
-             min="10" max="1000" step="5" value="634">
-      <span class="param-val" id="v-power">634</span>
+             min="10" max="500" step="5" value="150">
+      <span class="param-val" id="v-power">150</span>
     </div>
     <div class="param-note">
       Torque is derived from weight and grip, not set: past traction the
@@ -248,6 +248,16 @@
     <div class="param-note">
       Slower is stronger: below about 0.85 m/s the pull is traction-limited
       and the blade gets the whole 141 kN; faster, the engine runs out first.
+    </div>
+    <div class="param-row">
+      <label for="p-spillon">Spill when full</label>
+      <input type="range" id="p-spillon" data-param="spillWhenFull"
+             min="0" max="1" step="1" value="0">
+      <span class="param-val" id="v-spillon">0</span>
+    </div>
+    <div class="param-note">
+      0: the berm is the whole cut, and a machine that cannot push its wave
+      stalls where it is. 1: a full blade sheds the excess beside the slot.
     </div>
     <div class="param-row">
       <label for="p-spill">Side-cast (% of berm)</label>
