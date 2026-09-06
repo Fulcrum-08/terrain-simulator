@@ -58,6 +58,10 @@
         <span class="ledger-val" id="w-operate">0.000</span>
       </div>
       <div class="ledger-row">
+        <span class="ledger-key">&nbsp;&nbsp;of which earthwork</span>
+        <span class="ledger-val" id="w-earth">0.000</span>
+      </div>
+      <div class="ledger-row">
         <span class="ledger-key">Burn rate</span>
         <span class="ledger-val" id="w-burn">&mdash;</span>
       </div>
@@ -145,20 +149,14 @@
     <div class="param-heading">Drivetrain</div>
 
     <div class="param-row">
-      <label for="p-power">Rated power (kW)</label>
-      <input type="range" id="p-power" data-param="motorRatedPowerKW"
-             min="10" max="500" step="5" value="150">
-      <span class="param-val" id="v-power">150</span>
+      <label for="p-torque">Motor torque (Nm)</label>
+      <input type="range" id="p-torque" data-param="maxMotorTorqueNM"
+             min="50" max="2000" step="10" value="300">
+      <span class="param-val" id="v-torque">300</span>
     </div>
     <div class="param-note">
-      Torque is derived from weight and grip, not set: past traction the
-      wheels spin and bill you.
-    </div>
-    <div class="param-row">
-      <label for="p-rolling">Rolling resistance</label>
-      <input type="range" id="p-rolling" data-param="rollingResistance"
-             min="0.02" max="0.25" step="0.005" value="0.09">
-      <span class="param-val" id="v-rolling">0.09</span>
+      Per rear wheel. More torque moves more soil per minute and bills more
+      per minute; whether it pays is the yield figure in the wallet.
     </div>
 
     <div class="param-divider"></div>
@@ -225,12 +223,6 @@
       <span class="param-val" id="v-cutres">40000</span>
     </div>
     <div class="param-row">
-      <label for="p-workspeed">Work speed (m/s)</label>
-      <input type="range" id="p-workspeed" data-param="maxWorkSpeedMS"
-             min="0.3" max="2" step="0.05" value="0.7">
-      <span class="param-val" id="v-workspeed">0.7</span>
-    </div>
-    <div class="param-row">
       <label for="p-bladeload">Blade load share</label>
       <input type="range" id="p-bladeload" data-param="bladeLoadShare"
              min="0" max="0.9" step="0.05" value="0.6">
@@ -239,6 +231,16 @@
     <div class="param-note">
       How much of the drawbar pull the blade load may take. It slows the
       machine and bills the wallet; it never stops it. 0 makes plowing free.
+    </div>
+    <div class="param-row">
+      <label for="p-repose">Repose angle</label>
+      <input type="range" id="p-repose" data-param="soilReposeAngleDeg"
+             min="20" max="45" step="1" value="35">
+      <span class="param-val" id="v-repose">35</span>
+    </div>
+    <div class="param-note">
+      How steep loose spoil will stand. Sets the faces of the wave and the
+      berm: dry sand about 30&deg;, damp earth 35&ndash;40&deg;.
     </div>
     <div class="param-row">
       <label for="p-density">Soil density</label>
@@ -643,6 +645,7 @@
       document.querySelector("#w-budget").textContent    = s.budget.toFixed(3);
       document.querySelector("#w-deploy").textContent    = s.deploy.toFixed(3);
       document.querySelector("#w-operate").textContent   = s.operate.toFixed(3);
+      document.querySelector("#w-earth").textContent     = (s.earthwork || 0).toFixed(3);
       document.querySelector("#w-ripped").textContent    = Math.round(s.ripped) + " m\u00B2";
       document.querySelector("#w-soil").textContent      = s.soil.toFixed(2) + " m\u00B3";
       document.querySelector("#w-score").textContent     = s.score.toFixed(2) + " m\u00B3/kWh";
