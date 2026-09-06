@@ -102,8 +102,8 @@
       </div>
       <p class="flat-hint">
         Rippers move no soil themselves, but ground they have been through cuts
-        four times as deep at a fraction of the resistance. The balance between
-        the two fleets is the whole puzzle.
+        deeper at a fraction of the resistance. The balance between the two
+        fleets is the whole puzzle.
       </p>
       <button id="btn-flat-reset" class="sim-btn flat-btn">Reset site</button>
     </div>
@@ -144,11 +144,14 @@
     <div class="param-divider"></div>
     <div class="param-heading">Drivetrain</div>
 
+    <!-- Default matches what CalibrateDrivetrain() produces for an 18 t
+         machine on a 0.35 m wheel. The old default of 210 Nm was below
+         rolling resistance: one nudge of this slider parked the machine. -->
     <div class="param-row">
       <label for="p-torque">Motor torque (Nm)</label>
       <input type="range" id="p-torque" data-param="maxMotorTorqueNM"
-             min="50" max="20000" step="10" value="210">
-      <span class="param-val" id="v-torque">210</span>
+             min="1000" max="40000" step="100" value="12400">
+      <span class="param-val" id="v-torque">12400</span>
     </div>
     <div class="param-row">
       <label for="p-power">Rated power (kW)</label>
@@ -159,6 +162,7 @@
     <div class="param-note">
       Torque is capped by rated power above base speed, so more torque only
       buys pull at low speed. Past traction it spins the wheels and bills you.
+      Reset re-derives torque from the machine weight.
     </div>
     <div class="param-row">
       <label for="p-rolling">Rolling resistance</label>
@@ -215,8 +219,8 @@
       <span class="param-val" id="v-bladeh">1.2</span>
     </div>
     <div class="param-note">
-      Sets blade capacity as width x height squared. A full blade ends the pass
-      early, which is why real dozers push short.
+      Caps the crest of the bow wave. Spoil above the top of the blade rolls
+      over it, so a taller blade pushes a taller, shorter pile.
     </div>
     <div class="param-row">
       <label for="p-cutres">Cut resistance (kPa)</label>
@@ -224,11 +228,19 @@
              min="0" max="150000" step="1000" value="40000">
       <span class="param-val" id="v-cutres">40000</span>
     </div>
+    <!-- Was "Virgin bite" driving the deprecated virginCutFraction. The bite
+         now falls out of the force balance; what the player controls is the
+         commanded set depth, which the solve clamps to. -->
     <div class="param-row">
-      <label for="p-virgin">Virgin bite</label>
-      <input type="range" id="p-virgin" data-param="virginCutFraction"
-             min="0.02" max="1" step="0.01" value="0.25">
-      <span class="param-val" id="v-virgin">0.25</span>
+      <label for="p-plowdepth">Set depth (m)</label>
+      <input type="range" id="p-plowdepth" data-param="plowDepthM"
+             min="0.05" max="0.5" step="0.01" value="0.3">
+      <span class="param-val" id="v-plowdepth">0.3</span>
+    </div>
+    <div class="param-note">
+      The deepest furrow the blade may take. The machine cuts shallower than
+      this whenever cut force plus the wave it will be carrying by the end of
+      the pass would exceed its drawbar pull.
     </div>
     <div class="param-row">
       <label for="p-density">Soil density</label>
