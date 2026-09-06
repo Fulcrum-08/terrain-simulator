@@ -236,6 +236,18 @@
       ahead of the machine; the wave is what gets left as the berm.
     </div>
     <div class="param-row">
+      <label for="p-bermlen">Crescent radius</label>
+      <input type="range" id="p-bermlen" data-param="bermLengthCells"
+             min="3" max="60" step="1" value="12">
+      <span class="param-val" id="v-bermlen">12</span>
+    </div>
+    <div class="param-note">
+      Pass length in heightmap cells: how far the dozer pushes out from the
+      pivot before reversing back down the same line. Multiply by the cell
+      size in the startup log for metres. A bigger radius needs a bigger clear
+      wedge, so you get fewer, larger crescents.
+    </div>
+    <div class="param-row">
       <label for="p-passes">Passes per fan</label>
       <input type="range" id="p-passes" data-param="passesPerFan"
              min="2" max="21" step="1" value="7">
