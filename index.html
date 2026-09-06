@@ -72,6 +72,10 @@
         <span class="ledger-key">Soil moved</span>
         <span class="ledger-val" id="w-soil">0.00 m&sup3;</span>
       </div>
+      <div class="ledger-row">
+        <span class="ledger-key">Crescents</span>
+        <span class="ledger-val" id="w-built">0 / 0</span>
+      </div>
       <div class="ledger-row ledger-headline">
         <span class="ledger-key">Yield</span>
         <span class="ledger-val" id="w-score">0.00 m&sup3;/kWh</span>
@@ -248,6 +252,23 @@
       wedge, so you get fewer, larger crescents.
     </div>
     <div class="param-row">
+      <label for="p-bermwidth">Blade width</label>
+      <input type="range" id="p-bermwidth" data-param="bermWidthCells"
+             min="2" max="40" step="1" value="10">
+      <span class="param-val" id="v-bermwidth">10</span>
+    </div>
+    <div class="param-row">
+      <label for="p-travelspd">Tram speed (m/s)</label>
+      <input type="range" id="p-travelspd" data-param="travelSpeedMS"
+             min="0.5" max="8" step="0.1" value="3">
+      <span class="param-val" id="v-travelspd">3</span>
+    </div>
+    <div class="param-note">
+      How fast a machine drives between sites with the blade up. Changing
+      blade width or crescent radius re-pitches the site lattice, so do it
+      before a run rather than during one.
+    </div>
+    <div class="param-row">
       <label for="p-passes">Passes per fan</label>
       <input type="range" id="p-passes" data-param="passesPerFan"
              min="2" max="21" step="1" value="7">
@@ -309,8 +330,8 @@
     <div class="param-row">
       <label for="p-bladecap">Blade capacity</label>
       <input type="range" id="p-bladecap" data-param="bladeCapacityFactor"
-             min="0.2" max="4" step="0.1" value="1">
-      <span class="param-val" id="v-bladecap">1</span>
+             min="0.2" max="4" step="0.1" value="0.6">
+      <span class="param-val" id="v-bladecap">0.6</span>
     </div>
     <div class="param-note">
       Multiplier on how much loose spoil the moldboard holds before it spills
@@ -824,6 +845,8 @@
       document.querySelector("#w-ripped").textContent  = Math.round(s.ripped) + " m\u00B2";
       document.querySelector("#w-soil").textContent    = s.soil.toFixed(2) + " m\u00B3";
       document.querySelector("#w-score").textContent   = s.score.toFixed(2) + " m\u00B3/kWh";
+      document.querySelector("#w-built").textContent   =
+              (s.built || 0) + " / " + (s.sites || 0);
 
       paintCells(unlimited ? 1 : fracLeft);
       wallet.classList.toggle("flat", !!s.flat);
